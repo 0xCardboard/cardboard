@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import Link from "next/link";
 
 export default function RegisterPage() {
+  console.log("[register] component rendered (client)");
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -18,38 +19,48 @@ export default function RegisterPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    console.log("[register] form submitted", { name, email });
     setError("");
     setLoading(true);
 
-    const res = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
-    });
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      });
 
-    if (!res.ok) {
-      const data = await res.json();
-      setError(data.error || "Something went wrong");
+      console.log("[register] response status:", res.status);
+
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || "Something went wrong");
+        setLoading(false);
+        return;
+      }
+
+      // Auto sign-in after registration
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      console.log("[register] signIn result:", result);
       setLoading(false);
-      return;
+
+      if (result?.error) {
+        setError("Account created but sign-in failed. Please sign in manually.");
+        return;
+      }
+
+      router.push("/cards");
+      router.refresh();
+    } catch (err) {
+      console.error("[register] error:", err);
+      setError("Something went wrong. Check the console for details.");
+      setLoading(false);
     }
-
-    // Auto sign-in after registration
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
-
-    setLoading(false);
-
-    if (result?.error) {
-      setError("Account created but sign-in failed. Please sign in manually.");
-      return;
-    }
-
-    router.push("/cards");
-    router.refresh();
   }
 
   return (
