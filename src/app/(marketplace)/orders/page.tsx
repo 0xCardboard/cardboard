@@ -32,7 +32,7 @@ export default function OrdersPage() {
   const [cancelling, setCancelling] = useState<string | null>(null);
 
   const fetchOrders = useCallback(async () => {
-    const token = localStorage.getItem("accessToken");
+    const token = localStorage.getItem("cardboard_access_token");
     if (!token) {
       setLoading(false);
       return;
@@ -65,7 +65,7 @@ export default function OrdersPage() {
   }, [fetchOrders]);
 
   async function handleCancel(orderId: string) {
-    const token = localStorage.getItem("accessToken");
+    const token = localStorage.getItem("cardboard_access_token");
     if (!token) return;
 
     setCancelling(orderId);

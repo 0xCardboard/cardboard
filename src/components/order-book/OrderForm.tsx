@@ -26,7 +26,7 @@ export function OrderForm({ cardId }: OrderFormProps) {
     setSuccess(null);
 
     // Get token from localStorage
-    const token = localStorage.getItem("accessToken");
+    const token = localStorage.getItem("cardboard_access_token");
     if (!token) {
       setError("Please log in to place an order");
       setLoading(false);
