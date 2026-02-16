@@ -1,61 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useActionState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
+import { registerAction, type RegisterState } from "./actions";
+
+const initialState: RegisterState = {};
 
 export default function RegisterPage() {
-  const router = useRouter();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-
-    try {
-      const res = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.error || "Something went wrong");
-        setLoading(false);
-        return;
-      }
-
-      // Auto sign-in after registration
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      });
-
-      setLoading(false);
-
-      if (result?.error) {
-        setError("Account created but sign-in failed. Please sign in manually.");
-        return;
-      }
-
-      router.push("/cards");
-      router.refresh();
-    } catch {
-      setError("Something went wrong. Please try again.");
-      setLoading(false);
-    }
-  }
+  const [state, formAction, isPending] = useActionState(registerAction, initialState);
 
   return (
     <Card className="w-full max-w-md">
@@ -64,10 +19,10 @@ export default function RegisterPage() {
         <CardDescription>Start trading graded TCG cards today</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
+        <form action={formAction} className="space-y-4">
+          {state.error && (
             <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-              {error}
+              {state.error}
             </div>
           )}
           <div className="space-y-2">
@@ -76,10 +31,9 @@ export default function RegisterPage() {
             </label>
             <Input
               id="name"
+              name="name"
               type="text"
               placeholder="Your name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
             />
           </div>
           <div className="space-y-2">
@@ -88,10 +42,9 @@ export default function RegisterPage() {
             </label>
             <Input
               id="email"
+              name="email"
               type="email"
               placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
               required
             />
           </div>
@@ -101,10 +54,9 @@ export default function RegisterPage() {
             </label>
             <Input
               id="password"
+              name="password"
               type="password"
               placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
               required
               minLength={8}
             />
@@ -112,8 +64,8 @@ export default function RegisterPage() {
               Must be at least 8 characters
             </p>
           </div>
-          <Button className="w-full" type="submit" disabled={loading}>
-            {loading ? "Creating account..." : "Create Account"}
+          <Button className="w-full" type="submit" disabled={isPending}>
+            {isPending ? "Creating account..." : "Create Account"}
           </Button>
         </form>
         <p className="mt-4 text-center text-sm text-muted-foreground">
