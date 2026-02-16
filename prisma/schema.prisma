@@ -84,6 +84,17 @@ enum LoanOfferStatus {
   EXPIRED
 }
 
+enum NotificationType {
+  TRADE_FILLED
+  ORDER_PARTIALLY_FILLED
+  ORDER_CANCELLED
+  CARD_VERIFIED
+  CARD_VERIFICATION_FAILED
+  ESCROW_RELEASED
+  SHIPMENT_UPDATE
+  SYSTEM
+}
+
 // ─── Users & Auth ───────────────────────────────────────
 
 model User {
@@ -109,6 +120,8 @@ model User {
   loansAsLender   Loan[]         @relation("Lender")
   loanOffers      LoanOffer[]
   verifiedCards   CardInstance[] @relation("VerifiedBy")
+  refreshTokens   RefreshToken[]
+  notifications   Notification[]
 }
 
 model Reputation {
@@ -139,6 +152,24 @@ model Review {
   trade    Trade @relation(fields: [tradeId], references: [id], onDelete: Cascade)
 
   @@unique([reviewerId, tradeId])
+}
+
+// ─── Auth Tokens ────────────────────────────────────────
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  token     String    @unique
+  family    String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@index([family])
 }
 
 // ─── Card Catalog ───────────────────────────────────────
@@ -176,7 +207,7 @@ model Card {
   imageUrlHiRes String?
   supertype     String?
   subtypes      String[] @default([])
-  marketPrice   Float?
+  marketPrice   Int?     // cents
   lastPriceSync DateTime?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -184,6 +215,7 @@ model Card {
   set           CardSet        @relation(fields: [setId], references: [id], onDelete: Cascade)
   instances     CardInstance[]
   orderBook     OrderBook?
+  priceHistory  PriceHistory[]
 
   @@index([setId])
   @@index([name])
@@ -233,13 +265,14 @@ model Order {
   userId          String
   side            OrderSide
   type            OrderType
-  price           Float?      // null for market orders
+  price           Int?        // cents, null for market orders
   quantity        Int         @default(1)
   filledQuantity  Int         @default(0)
   status          OrderStatus @default(OPEN)
   cardInstanceId  String?     // required for sell orders
   gradingCompany  GradingCompany? // optional filter
   minGrade        Float?      // optional filter
+  idempotencyKey  String?     @unique
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
@@ -257,7 +290,7 @@ model Trade {
   id              String       @id @default(cuid())
   buyOrderId      String
   sellOrderId     String
-  price           Float
+  price           Int          // cents
   quantity        Int          @default(1)
   buyerId         String
   sellerId        String
@@ -271,6 +304,52 @@ model Trade {
   buyer     User     @relation("BuyTrades", fields: [buyerId], references: [id], onDelete: Cascade)
   seller    User     @relation("SellTrades", fields: [sellerId], references: [id], onDelete: Cascade)
   reviews   Review[]
+  fee       TradeFee?
+}
+
+// ─── Trade Fees ─────────────────────────────────────────
+
+model TradeFee {
+  id        String   @id @default(cuid())
+  tradeId   String   @unique
+  amount    Int      // fee in cents
+  rate      Float    // fee rate at time of trade (e.g., 0.03)
+  createdAt DateTime @default(now())
+
+  trade Trade @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+}
+
+// ─── Price History ──────────────────────────────────────
+
+model PriceHistory {
+  id        String   @id @default(cuid())
+  cardId    String
+  price     Int      // cents — last trade price
+  volume    Int      // number of trades in this period
+  high      Int      // highest trade price (cents)
+  low       Int      // lowest trade price (cents)
+  timestamp DateTime @default(now())
+
+  card Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@index([cardId, timestamp])
+}
+
+// ─── Notifications ──────────────────────────────────────
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  data      Json?
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
 }
 
 // ─── Shipping ───────────────────────────────────────────
@@ -300,7 +379,7 @@ model Loan {
   borrowerId     String
   lenderId       String?
   cardInstanceId String     @unique
-  principal      Float
+  principal      Int        // cents
   interestRate   Float
   durationDays   Int
   status         LoanStatus @default(REQUESTING)
@@ -322,7 +401,7 @@ model LoanOffer {
   id           String          @id @default(cuid())
   loanId       String
   lenderId     String
-  principal    Float
+  principal    Int             // cents
   interestRate Float
   durationDays Int
   status       LoanOfferStatus @default(PENDING)

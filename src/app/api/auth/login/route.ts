@@ -1,16 +1,16 @@
 import { NextResponse } from "next/server";
-import { register } from "@/services/auth.service";
+import { login } from "@/services/auth.service";
 import { errorResponse } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
-    const { name, email, password } = await request.json();
+    const { email, password } = await request.json();
 
-    const result = await register(email, password, name);
+    const result = await login(email, password);
 
-    return NextResponse.json({ data: result }, { status: 201 });
+    return NextResponse.json({ data: result });
   } catch (error) {
     return errorResponse(error);
   }

@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useSession, signOut } from "next-auth/react";
+import { useAuth } from "@/components/providers/AuthProvider";
 import { Button } from "@/components/ui/button";
 
 export function Navbar() {
-  const { data: session, status } = useSession();
+  const { user, status, logout } = useAuth();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -14,15 +14,24 @@ export function Navbar() {
           <span className="text-xl font-bold">Cardboard</span>
         </Link>
         <nav className="flex flex-1 items-center space-x-6 text-sm font-medium">
-          <Link href="/cards" className="transition-colors hover:text-foreground/80 text-foreground/60">
+          <Link
+            href="/cards"
+            className="transition-colors hover:text-foreground/80 text-foreground/60"
+          >
             Browse
           </Link>
-          {session && (
+          {user && (
             <>
-              <Link href="/orders" className="transition-colors hover:text-foreground/80 text-foreground/60">
+              <Link
+                href="/orders"
+                className="transition-colors hover:text-foreground/80 text-foreground/60"
+              >
                 Orders
               </Link>
-              <Link href="/portfolio" className="transition-colors hover:text-foreground/80 text-foreground/60">
+              <Link
+                href="/portfolio"
+                className="transition-colors hover:text-foreground/80 text-foreground/60"
+              >
                 Portfolio
               </Link>
             </>
@@ -31,16 +40,10 @@ export function Navbar() {
         <div className="flex items-center space-x-2">
           {status === "loading" ? (
             <div className="h-8 w-20 animate-pulse rounded bg-muted" />
-          ) : session ? (
+          ) : user ? (
             <>
-              <span className="text-sm text-muted-foreground">
-                {session.user.name || session.user.email}
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => signOut({ callbackUrl: "/" })}
-              >
+              <span className="text-sm text-muted-foreground">{user.name || user.email}</span>
+              <Button variant="ghost" size="sm" onClick={() => logout()}>
                 Sign Out
               </Button>
             </>
