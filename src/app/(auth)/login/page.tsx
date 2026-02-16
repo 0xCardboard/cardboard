@@ -2,7 +2,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
-import { loginAction } from "./actions";
 
 export default async function LoginPage({
   searchParams,
@@ -18,7 +17,7 @@ export default async function LoginPage({
         <CardDescription>Sign in to your Cardboard account</CardDescription>
       </CardHeader>
       <CardContent>
-        <form action={loginAction} className="space-y-4">
+        <form method="POST" action="/api/auth/login-form" className="space-y-4">
           {error && (
             <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
               {error}
