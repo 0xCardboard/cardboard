@@ -36,6 +36,8 @@ const ORDER_INCLUDE = {
       gradingCompany: true,
     },
   },
+  buyTrades: { select: { price: true, quantity: true } },
+  sellTrades: { select: { price: true, quantity: true } },
 } as const;
 
 export async function placeOrder(
@@ -374,6 +376,19 @@ export async function getOrderBook(cardId: string): Promise<OrderBookSnapshot> {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function transformOrder(order: any): OrderWithDetails {
+  // Compute weighted average fill price from trades
+  const trades: { price: number; quantity: number }[] =
+    order.side === "BUY" ? (order.buyTrades ?? []) : (order.sellTrades ?? []);
+  let avgFillPrice: number | null = null;
+  if (trades.length > 0) {
+    const totalQty = trades.reduce((sum: number, t: { quantity: number }) => sum + t.quantity, 0);
+    const totalValue = trades.reduce(
+      (sum: number, t: { price: number; quantity: number }) => sum + t.price * t.quantity,
+      0,
+    );
+    avgFillPrice = totalQty > 0 ? Math.round(totalValue / totalQty) : null;
+  }
+
   return {
     id: order.id,
     side: order.side,
@@ -381,6 +396,7 @@ function transformOrder(order: any): OrderWithDetails {
     price: order.price,
     quantity: order.quantity,
     filledQuantity: order.filledQuantity,
+    avgFillPrice,
     status: order.status,
     gradingCompany: order.gradingCompany,
     minGrade: order.minGrade,

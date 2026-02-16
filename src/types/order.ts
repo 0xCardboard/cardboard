@@ -37,6 +37,7 @@ export interface OrderWithDetails {
   price: number | null;
   quantity: number;
   filledQuantity: number;
+  avgFillPrice: number | null;
   status: "OPEN" | "PARTIALLY_FILLED" | "FILLED" | "CANCELLED";
   gradingCompany: string | null;
   minGrade: number | null;
