@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { AppError } from "@/lib/errors";
+import { matchOrder } from "@/services/matching.service";
 import { orderMatchingQueue } from "@/jobs/queue";
 import type {
   PlaceOrderInput,
@@ -183,14 +184,27 @@ export async function placeOrder(
     });
   }
 
-  // Enqueue matching job
-  await orderMatchingQueue.add("match", {
-    orderId: order.id,
-    orderBookId: orderBook.id,
-    cardId: input.cardId,
+  // Run matching inline so orders fill immediately
+  await matchOrder(order.id);
+
+  // Also enqueue a background job as a safety-net retry (best-effort, non-blocking)
+  orderMatchingQueue
+    .add("match", {
+      orderId: order.id,
+      orderBookId: orderBook.id,
+      cardId: input.cardId,
+    })
+    .catch(() => {
+      // Queue unavailable — inline matching above already handled the match
+    });
+
+  // Re-fetch the order to reflect any fills from matching
+  const updatedOrder = await prisma.order.findUnique({
+    where: { id: order.id },
+    include: ORDER_INCLUDE,
   });
 
-  return transformOrder(order);
+  return transformOrder(updatedOrder ?? order);
 }
 
 export async function cancelOrder(

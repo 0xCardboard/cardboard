@@ -15,6 +15,11 @@ vi.mock("@/jobs/queue", () => ({
   QUEUE_NAMES: { ORDER_MATCHING: "order-matching" },
 }));
 
+// Mock matching service — matchOrder is tested separately in matching.service.test.ts
+vi.mock("@/services/matching.service", () => ({
+  matchOrder: vi.fn().mockResolvedValue({ tradesCreated: 0, ordersUpdated: 0 }),
+}));
+
 const mockOrderBook = { id: "ob-1", cardId: "card-1" };
 
 const mockOrder = {
@@ -54,6 +59,8 @@ describe("order.service", () => {
       (prisma.card.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "card-1" });
       (prisma.orderBook.upsert as ReturnType<typeof vi.fn>).mockResolvedValue(mockOrderBook);
       (prisma.order.create as ReturnType<typeof vi.fn>).mockResolvedValue(mockOrder);
+      // Re-fetch after matching returns the same order
+      (prisma.order.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(mockOrder);
 
       const result = await placeOrder("user-1", {
         cardId: "card-1",
@@ -120,6 +127,19 @@ describe("order.service", () => {
     });
 
     it("creates a SELL order with cert details (Path A)", async () => {
+      const sellOrderData = {
+        ...mockOrder,
+        id: "sell-order-1",
+        side: "SELL",
+        price: 5000,
+        cardInstanceId: "inst-new",
+        cardInstance: {
+          id: "inst-new",
+          certNumber: "12345678",
+          grade: 9.5,
+          gradingCompany: "PSA",
+        },
+      };
       (prisma.card.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "card-1" });
       (prisma.cardInstance.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null); // no existing cert
       (prisma.cardInstance.create as ReturnType<typeof vi.fn>).mockResolvedValue({
@@ -132,19 +152,9 @@ describe("order.service", () => {
         status: "LISTED",
       });
       (prisma.orderBook.upsert as ReturnType<typeof vi.fn>).mockResolvedValue(mockOrderBook);
-      (prisma.order.create as ReturnType<typeof vi.fn>).mockResolvedValue({
-        ...mockOrder,
-        id: "sell-order-1",
-        side: "SELL",
-        price: 5000,
-        cardInstanceId: "inst-new",
-        cardInstance: {
-          id: "inst-new",
-          certNumber: "12345678",
-          grade: 9.5,
-          gradingCompany: "PSA",
-        },
-      });
+      (prisma.order.create as ReturnType<typeof vi.fn>).mockResolvedValue(sellOrderData);
+      // Re-fetch after matching
+      (prisma.order.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(sellOrderData);
 
       const result = await placeOrder("user-1", {
         cardId: "card-1",
