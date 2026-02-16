@@ -217,7 +217,20 @@ export default function OrdersPage() {
                     {order.type}
                   </TableCell>
                   <TableCell className="text-right">
-                    {order.price ? formatPrice(order.price) : "Market"}
+                    {order.avgFillPrice ? (
+                      <>
+                        {formatPrice(order.avgFillPrice)}
+                        {order.price && order.price !== order.avgFillPrice && (
+                          <div className="text-xs text-muted-foreground">
+                            Limit: {formatPrice(order.price)}
+                          </div>
+                        )}
+                      </>
+                    ) : order.price ? (
+                      formatPrice(order.price)
+                    ) : (
+                      "Market"
+                    )}
                   </TableCell>
                   <TableCell className="text-right">{order.quantity}</TableCell>
                   <TableCell className="text-right">

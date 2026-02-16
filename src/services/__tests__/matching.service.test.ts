@@ -4,7 +4,7 @@ import { matchOrder } from "@/services/matching.service";
 
 describe("matching.service", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
   });
 
   const makeBuyOrder = (overrides = {}) => ({
@@ -137,7 +137,7 @@ describe("matching.service", () => {
     expect(result.ordersUpdated).toBe(4); // 2 trades * 2 orders each
   });
 
-  it("uses trade price from resting order", async () => {
+  it("uses trade price from resting order (buy incoming)", async () => {
     const buyOrder = makeBuyOrder({ price: 5000 });
     const sellOrder = makeSellOrder({ price: 4500 }); // lower ask = better for buyer
 
@@ -166,5 +166,40 @@ describe("matching.service", () => {
     await matchOrder("buy-1");
     // Trade executes at the resting (sell) order's price
     expect(tradePrice).toBe(4500);
+  });
+
+  it("uses trade price from resting order (sell incoming)", async () => {
+    // Scenario: resting buy at $15, incoming sell at $14.50
+    // Trade should execute at $15 (the resting buy's price)
+    const buyOrder = makeBuyOrder({ price: 1500 });
+    const sellOrder = makeSellOrder({ id: "sell-1", price: 1450 });
+
+    // Sell order is incoming
+    (prisma.order.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(sellOrder);
+    // findBestMatch returns the resting buy order
+    (prisma.order.findFirst as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce(buyOrder)
+      .mockResolvedValueOnce(null);
+
+    let tradePrice: number | null = null;
+    (prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation(
+      async (fn: (tx: typeof prisma) => Promise<void>) => {
+        const txMock = {
+          trade: {
+            create: vi.fn().mockImplementation((args: { data: { price: number } }) => {
+              tradePrice = args.data.price;
+              return Promise.resolve({ id: "trade-1" });
+            }),
+          },
+          order: { update: vi.fn().mockResolvedValue({}) },
+          cardInstance: { update: vi.fn().mockResolvedValue({}) },
+        };
+        await fn(txMock as unknown as typeof prisma);
+      },
+    );
+
+    await matchOrder("sell-1");
+    // Trade executes at the resting (buy) order's price, NOT the incoming sell's price
+    expect(tradePrice).toBe(1500);
   });
 });
