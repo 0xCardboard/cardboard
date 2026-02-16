@@ -184,3 +184,7 @@ export function useAuth() {
   }
   return context;
 }
+
+export function getAccessToken(): string | null {
+  return getStoredTokens().accessToken;
+}

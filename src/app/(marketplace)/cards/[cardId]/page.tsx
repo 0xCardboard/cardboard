@@ -2,6 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCardById } from "@/services/card-catalog.service";
 import { CardDetail } from "@/components/cards/CardDetail";
+import { OrderBook } from "@/components/order-book/OrderBook";
+import { OrderForm } from "@/components/order-book/OrderForm";
+import { TradeHistory } from "@/components/order-book/TradeHistory";
 import { AppError } from "@/lib/errors";
 
 async function fetchCard(cardId: string) {
@@ -32,6 +35,17 @@ export default async function CardDetailPage({
         &larr; Back to browse
       </Link>
       <CardDetail card={card} />
+
+      {/* Order Book + Trading Section */}
+      <div className="mt-12 grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-8">
+          <OrderBook cardId={cardId} />
+          <TradeHistory cardId={cardId} />
+        </div>
+        <div>
+          <OrderForm cardId={cardId} />
+        </div>
+      </div>
     </div>
   );
 }
