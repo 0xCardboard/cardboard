@@ -1,16 +1,16 @@
 import { NextResponse } from "next/server";
-import { register } from "@/services/auth.service";
+import { revokeToken } from "@/services/auth.service";
 import { errorResponse } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
-    const { name, email, password } = await request.json();
+    const { refreshToken } = await request.json();
 
-    const result = await register(email, password, name);
+    await revokeToken(refreshToken);
 
-    return NextResponse.json({ data: result }, { status: 201 });
+    return NextResponse.json({ data: { success: true } });
   } catch (error) {
     return errorResponse(error);
   }
