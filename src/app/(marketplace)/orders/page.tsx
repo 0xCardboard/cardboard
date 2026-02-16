@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { getAccessToken } from "@/components/providers/AuthProvider";
 import {
   Table,
   TableBody,
@@ -32,7 +33,7 @@ export default function OrdersPage() {
   const [cancelling, setCancelling] = useState<string | null>(null);
 
   const fetchOrders = useCallback(async () => {
-    const token = localStorage.getItem("cardboard_access_token");
+    const token = getAccessToken();
     if (!token) {
       setLoading(false);
       return;
@@ -65,7 +66,7 @@ export default function OrdersPage() {
   }, [fetchOrders]);
 
   async function handleCancel(orderId: string) {
-    const token = localStorage.getItem("cardboard_access_token");
+    const token = getAccessToken();
     if (!token) return;
 
     setCancelling(orderId);

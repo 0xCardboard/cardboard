@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAuth, getAccessToken } from "@/components/providers/AuthProvider";
 
 interface OrderFormProps {
   cardId: string;
@@ -11,6 +12,7 @@ interface OrderFormProps {
 
 export function OrderForm({ cardId }: OrderFormProps) {
   const router = useRouter();
+  const { status } = useAuth();
   const [side, setSide] = useState<"BUY" | "SELL">("BUY");
   const [type, setType] = useState<"LIMIT" | "MARKET">("LIMIT");
   const [price, setPrice] = useState("");
@@ -25,8 +27,7 @@ export function OrderForm({ cardId }: OrderFormProps) {
     setError(null);
     setSuccess(null);
 
-    // Get token from localStorage
-    const token = localStorage.getItem("cardboard_access_token");
+    const token = getAccessToken();
     if (!token) {
       setError("Please log in to place an order");
       setLoading(false);
@@ -73,6 +74,17 @@ export function OrderForm({ cardId }: OrderFormProps) {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (status !== "authenticated") {
+    return (
+      <div className="space-y-4">
+        <h2 className="text-lg font-semibold">Place Order</h2>
+        <p className="text-sm text-muted-foreground">
+          Please log in to place orders.
+        </p>
+      </div>
+    );
   }
 
   return (
