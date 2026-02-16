@@ -1,0 +1,337 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ──────────────────────────────────────────────
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum GradingCompany {
+  PSA
+  BGS
+  CGC
+}
+
+enum CardInstanceStatus {
+  PENDING_SHIPMENT
+  IN_TRANSIT
+  PENDING_VERIFICATION
+  VERIFIED
+  LISTED
+  SOLD
+  REDEEMED
+  LOCKED_COLLATERAL
+}
+
+enum OrderSide {
+  BUY
+  SELL
+}
+
+enum OrderType {
+  LIMIT
+  MARKET
+}
+
+enum OrderStatus {
+  OPEN
+  PARTIALLY_FILLED
+  FILLED
+  CANCELLED
+}
+
+enum EscrowStatus {
+  PENDING
+  AUTHORIZED
+  CAPTURED
+  RELEASED
+  CANCELLED
+}
+
+enum ShipmentDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum ShipmentStatus {
+  LABEL_CREATED
+  SHIPPED
+  IN_TRANSIT
+  DELIVERED
+  RETURNED
+}
+
+enum LoanStatus {
+  REQUESTING
+  FUNDED
+  ACTIVE
+  REPAID
+  DEFAULTED
+}
+
+enum LoanOfferStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+// ─── Users & Auth ───────────────────────────────────────
+
+model User {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  passwordHash    String
+  name            String?
+  avatarUrl       String?
+  stripeAccountId String?
+  role            UserRole @default(USER)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  reputation      Reputation?
+  reviewsGiven    Review[]       @relation("ReviewsGiven")
+  reviewsReceived Review[]       @relation("ReviewsReceived")
+  cardInstances   CardInstance[]
+  orders          Order[]
+  buyTrades       Trade[]        @relation("BuyTrades")
+  sellTrades      Trade[]        @relation("SellTrades")
+  shipments       Shipment[]
+  loansAsBorrower Loan[]         @relation("Borrower")
+  loansAsLender   Loan[]         @relation("Lender")
+  loanOffers      LoanOffer[]
+  verifiedCards   CardInstance[] @relation("VerifiedBy")
+}
+
+model Reputation {
+  id               String @id @default(cuid())
+  userId           String @unique
+  score            Float  @default(0)
+  totalTrades      Int    @default(0)
+  successfulTrades Int    @default(0)
+  avgShipTimeDays  Float  @default(0)
+  disputeCount     Int    @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  reviewerId String
+  revieweeId String
+  tradeId    String
+  rating     Int      // 1-5
+  comment    String?
+  createdAt  DateTime @default(now())
+
+  reviewer User  @relation("ReviewsGiven", fields: [reviewerId], references: [id], onDelete: Cascade)
+  reviewee User  @relation("ReviewsReceived", fields: [revieweeId], references: [id], onDelete: Cascade)
+  trade    Trade @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewerId, tradeId])
+}
+
+// ─── Card Catalog ───────────────────────────────────────
+
+model TcgGame {
+  id   String @id // "pokemon", "onepiece", etc.
+  name String
+
+  sets CardSet[]
+}
+
+model CardSet {
+  id         String    @id
+  name       String
+  gameId     String
+  releaseDate DateTime?
+  totalCards  Int?
+  logoUrl    String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  game  TcgGame @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  cards Card[]
+
+  @@index([gameId])
+}
+
+model Card {
+  id            String   @id
+  name          String
+  setId         String
+  number        String?
+  rarity        String?
+  imageUrl      String?
+  imageUrlHiRes String?
+  supertype     String?
+  subtypes      String[] @default([])
+  marketPrice   Float?
+  lastPriceSync DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  set           CardSet        @relation(fields: [setId], references: [id], onDelete: Cascade)
+  instances     CardInstance[]
+  orderBook     OrderBook?
+
+  @@index([setId])
+  @@index([name])
+}
+
+// ─── Card Instances (IOUs) ──────────────────────────────
+
+model CardInstance {
+  id             String             @id @default(cuid())
+  cardId         String
+  ownerId        String
+  gradingCompany GradingCompany
+  certNumber     String             @unique
+  grade          Float
+  status         CardInstanceStatus @default(PENDING_SHIPMENT)
+  imageUrls      String[]           @default([])
+  verifiedAt     DateTime?
+  verifiedById   String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  card       Card      @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  owner      User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  verifiedBy User?     @relation("VerifiedBy", fields: [verifiedById], references: [id])
+  orders     Order[]
+  shipments  Shipment[]
+  loan       Loan?
+
+  @@index([cardId])
+  @@index([ownerId])
+  @@index([status])
+}
+
+// ─── Order Book & Trading ───────────────────────────────
+
+model OrderBook {
+  id     String @id @default(cuid())
+  cardId String @unique
+
+  card   Card    @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  orders Order[]
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  orderBookId     String
+  userId          String
+  side            OrderSide
+  type            OrderType
+  price           Float?      // null for market orders
+  quantity        Int         @default(1)
+  filledQuantity  Int         @default(0)
+  status          OrderStatus @default(OPEN)
+  cardInstanceId  String?     // required for sell orders
+  gradingCompany  GradingCompany? // optional filter
+  minGrade        Float?      // optional filter
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  orderBook    OrderBook     @relation(fields: [orderBookId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cardInstance CardInstance?  @relation(fields: [cardInstanceId], references: [id])
+  buyTrades    Trade[]       @relation("BuyOrder")
+  sellTrades   Trade[]       @relation("SellOrder")
+
+  @@index([orderBookId, side, status])
+  @@index([userId])
+}
+
+model Trade {
+  id              String       @id @default(cuid())
+  buyOrderId      String
+  sellOrderId     String
+  price           Float
+  quantity        Int          @default(1)
+  buyerId         String
+  sellerId        String
+  stripePaymentId String?
+  escrowStatus    EscrowStatus @default(PENDING)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  buyOrder  Order    @relation("BuyOrder", fields: [buyOrderId], references: [id], onDelete: Cascade)
+  sellOrder Order    @relation("SellOrder", fields: [sellOrderId], references: [id], onDelete: Cascade)
+  buyer     User     @relation("BuyTrades", fields: [buyerId], references: [id], onDelete: Cascade)
+  seller    User     @relation("SellTrades", fields: [sellerId], references: [id], onDelete: Cascade)
+  reviews   Review[]
+}
+
+// ─── Shipping ───────────────────────────────────────────
+
+model Shipment {
+  id             String            @id @default(cuid())
+  cardInstanceId String
+  userId         String
+  direction      ShipmentDirection
+  trackingNumber String?
+  carrier        String?
+  status         ShipmentStatus    @default(LABEL_CREATED)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  cardInstance CardInstance @relation(fields: [cardInstanceId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([cardInstanceId])
+  @@index([userId])
+}
+
+// ─── Phase 2: Lending ───────────────────────────────────
+
+model Loan {
+  id             String     @id @default(cuid())
+  borrowerId     String
+  lenderId       String?
+  cardInstanceId String     @unique
+  principal      Float
+  interestRate   Float
+  durationDays   Int
+  status         LoanStatus @default(REQUESTING)
+  fundedAt       DateTime?
+  dueDate        DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  borrower     User         @relation("Borrower", fields: [borrowerId], references: [id], onDelete: Cascade)
+  lender       User?        @relation("Lender", fields: [lenderId], references: [id])
+  cardInstance CardInstance  @relation(fields: [cardInstanceId], references: [id], onDelete: Cascade)
+  offers       LoanOffer[]
+
+  @@index([borrowerId])
+  @@index([status])
+}
+
+model LoanOffer {
+  id           String          @id @default(cuid())
+  loanId       String
+  lenderId     String
+  principal    Float
+  interestRate Float
+  durationDays Int
+  status       LoanOfferStatus @default(PENDING)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  loan   Loan @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  lender User @relation(fields: [lenderId], references: [id], onDelete: Cascade)
+
+  @@index([loanId])
+  @@index([lenderId])
+}
