@@ -106,7 +106,7 @@ describe("order.service", () => {
       ).rejects.toThrow("Price must be positive");
     });
 
-    it("validates card instance for SELL orders", async () => {
+    it("validates sell orders require cert details or card instance", async () => {
       (prisma.card.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "card-1" });
 
       await expect(
@@ -116,7 +116,85 @@ describe("order.service", () => {
           type: "LIMIT",
           price: 5000,
         }),
-      ).rejects.toThrow("Sell orders require a card instance");
+      ).rejects.toThrow("Sell orders require certNumber, gradingCompany, and grade");
+    });
+
+    it("creates a SELL order with cert details (Path A)", async () => {
+      (prisma.card.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "card-1" });
+      (prisma.cardInstance.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null); // no existing cert
+      (prisma.cardInstance.create as ReturnType<typeof vi.fn>).mockResolvedValue({
+        id: "inst-new",
+        cardId: "card-1",
+        ownerId: "user-1",
+        gradingCompany: "PSA",
+        certNumber: "12345678",
+        grade: 9.5,
+        status: "LISTED",
+      });
+      (prisma.orderBook.upsert as ReturnType<typeof vi.fn>).mockResolvedValue(mockOrderBook);
+      (prisma.order.create as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ...mockOrder,
+        id: "sell-order-1",
+        side: "SELL",
+        price: 5000,
+        cardInstanceId: "inst-new",
+        cardInstance: {
+          id: "inst-new",
+          certNumber: "12345678",
+          grade: 9.5,
+          gradingCompany: "PSA",
+        },
+      });
+
+      const result = await placeOrder("user-1", {
+        cardId: "card-1",
+        side: "SELL",
+        type: "LIMIT",
+        price: 5000,
+        certNumber: "12345678",
+        gradingCompany: "PSA",
+        grade: 9.5,
+      });
+
+      expect(result.side).toBe("SELL");
+      expect(prisma.cardInstance.create).toHaveBeenCalled();
+      expect(prisma.order.create).toHaveBeenCalled();
+    });
+
+    it("rejects duplicate cert numbers", async () => {
+      (prisma.card.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "card-1" });
+      (prisma.cardInstance.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+        id: "existing-inst",
+        certNumber: "12345678",
+      });
+
+      await expect(
+        placeOrder("user-1", {
+          cardId: "card-1",
+          side: "SELL",
+          type: "LIMIT",
+          price: 5000,
+          certNumber: "12345678",
+          gradingCompany: "PSA",
+          grade: 9.5,
+        }),
+      ).rejects.toThrow("Cert number already registered");
+    });
+
+    it("rejects invalid grade values", async () => {
+      (prisma.card.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "card-1" });
+
+      await expect(
+        placeOrder("user-1", {
+          cardId: "card-1",
+          side: "SELL",
+          type: "LIMIT",
+          price: 5000,
+          certNumber: "12345678",
+          gradingCompany: "PSA",
+          grade: 11,
+        }),
+      ).rejects.toThrow("Grade must be between 1 and 10");
     });
 
     it("prevents selling unverified card instances", async () => {
@@ -200,13 +278,14 @@ describe("order.service", () => {
   });
 
   describe("cancelOrder", () => {
-    it("cancels an open order", async () => {
+    it("cancels an open buy order", async () => {
       (prisma.order.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
         ...mockOrder,
         userId: "user-1",
         side: "BUY",
         status: "OPEN",
         cardInstanceId: null,
+        cardInstance: null,
       });
       (prisma.order.update as ReturnType<typeof vi.fn>).mockResolvedValue({
         ...mockOrder,
@@ -215,6 +294,47 @@ describe("order.service", () => {
 
       const result = await cancelOrder("user-1", "order-1");
       expect(result.status).toBe("CANCELLED");
+    });
+
+    it("cancels a Path A sell order and deletes the card instance", async () => {
+      (prisma.order.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ...mockOrder,
+        userId: "user-1",
+        side: "SELL",
+        status: "OPEN",
+        cardInstanceId: "inst-1",
+        cardInstance: { id: "inst-1", status: "LISTED", verifiedAt: null },
+      });
+      (prisma.order.update as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ...mockOrder,
+        status: "CANCELLED",
+      });
+
+      await cancelOrder("user-1", "order-1");
+      expect(prisma.cardInstance.delete).toHaveBeenCalledWith({
+        where: { id: "inst-1" },
+      });
+    });
+
+    it("cancels a Path B sell order and reverts card instance to VERIFIED", async () => {
+      (prisma.order.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ...mockOrder,
+        userId: "user-1",
+        side: "SELL",
+        status: "OPEN",
+        cardInstanceId: "inst-1",
+        cardInstance: { id: "inst-1", status: "LISTED", verifiedAt: new Date() },
+      });
+      (prisma.order.update as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ...mockOrder,
+        status: "CANCELLED",
+      });
+
+      await cancelOrder("user-1", "order-1");
+      expect(prisma.cardInstance.update).toHaveBeenCalledWith({
+        where: { id: "inst-1" },
+        data: { status: "VERIFIED" },
+      });
     });
 
     it("throws NOT_FOUND for missing order", async () => {

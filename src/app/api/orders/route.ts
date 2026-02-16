@@ -26,7 +26,7 @@ export const GET = withAuth(async (req: AuthenticatedRequest) => {
 export const POST = withAuth(async (req: AuthenticatedRequest) => {
   try {
     const body = await req.json();
-    const { cardId, side, type, price, quantity, cardInstanceId, gradingCompany, minGrade, idempotencyKey } = body;
+    const { cardId, side, type, price, quantity, cardInstanceId, certNumber, gradingCompany, grade, minGrade, idempotencyKey } = body;
 
     if (!cardId || !side || !type) {
       throw new AppError("VALIDATION_ERROR", "cardId, side, and type are required");
@@ -47,7 +47,9 @@ export const POST = withAuth(async (req: AuthenticatedRequest) => {
       price: price !== undefined ? parseInt(price) : undefined,
       quantity: quantity !== undefined ? parseInt(quantity) : undefined,
       cardInstanceId,
+      certNumber,
       gradingCompany,
+      grade: grade !== undefined ? parseFloat(grade) : undefined,
       minGrade: minGrade !== undefined ? parseFloat(minGrade) : undefined,
       idempotencyKey,
     });

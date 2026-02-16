@@ -10,6 +10,8 @@ interface OrderFormProps {
   cardId: string;
 }
 
+const GRADING_COMPANIES = ["PSA", "BGS", "CGC"] as const;
+
 export function OrderForm({ cardId }: OrderFormProps) {
   const router = useRouter();
   const { status } = useAuth();
@@ -17,6 +19,9 @@ export function OrderForm({ cardId }: OrderFormProps) {
   const [type, setType] = useState<"LIMIT" | "MARKET">("LIMIT");
   const [price, setPrice] = useState("");
   const [quantity, setQuantity] = useState("1");
+  const [certNumber, setCertNumber] = useState("");
+  const [gradingCompany, setGradingCompany] = useState<"PSA" | "BGS" | "CGC">("PSA");
+  const [grade, setGrade] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -50,6 +55,20 @@ export function OrderForm({ cardId }: OrderFormProps) {
         body.price = priceInCents;
       }
 
+      // Sell orders require card details
+      if (side === "SELL") {
+        if (!certNumber.trim()) {
+          throw new Error("Please enter the certificate number");
+        }
+        const gradeNum = parseFloat(grade);
+        if (isNaN(gradeNum) || gradeNum < 1 || gradeNum > 10) {
+          throw new Error("Please enter a valid grade (1-10)");
+        }
+        body.certNumber = certNumber.trim();
+        body.gradingCompany = gradingCompany;
+        body.grade = gradeNum;
+      }
+
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: {
@@ -68,6 +87,8 @@ export function OrderForm({ cardId }: OrderFormProps) {
       setSuccess(`${side} order placed successfully`);
       setPrice("");
       setQuantity("1");
+      setCertNumber("");
+      setGrade("");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to place order");
@@ -157,6 +178,56 @@ export function OrderForm({ cardId }: OrderFormProps) {
             required
           />
         </div>
+
+        {/* Sell-side card details */}
+        {side === "SELL" && (
+          <>
+            <div className="border-t pt-3">
+              <p className="text-sm font-medium mb-2">Card Details</p>
+            </div>
+            <div>
+              <label className="text-sm text-muted-foreground mb-1 block">
+                Grading Company
+              </label>
+              <select
+                value={gradingCompany}
+                onChange={(e) => setGradingCompany(e.target.value as "PSA" | "BGS" | "CGC")}
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                {GRADING_COMPANIES.map((gc) => (
+                  <option key={gc} value={gc}>{gc}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-sm text-muted-foreground mb-1 block">
+                Certificate Number
+              </label>
+              <Input
+                type="text"
+                placeholder="e.g. 12345678"
+                value={certNumber}
+                onChange={(e) => setCertNumber(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <label className="text-sm text-muted-foreground mb-1 block">
+                Grade
+              </label>
+              <Input
+                type="number"
+                step="0.5"
+                min="1"
+                max="10"
+                placeholder="e.g. 9.5"
+                value={grade}
+                onChange={(e) => setGrade(e.target.value)}
+                required
+              />
+            </div>
+          </>
+        )}
 
         {error && (
           <p className="text-sm text-destructive">{error}</p>

@@ -97,14 +97,12 @@ export async function matchOrder(orderId: string): Promise<MatchResult> {
         },
       });
 
-      // Transfer card instance ownership for sell orders
+      // Mark card instance as pending shipment — seller must ship to company.
+      // Ownership transfers only after verification (handled in settlement flow).
       if (sellOrder.cardInstanceId) {
         await tx.cardInstance.update({
           where: { id: sellOrder.cardInstanceId },
-          data: {
-            ownerId: buyOrder.userId,
-            status: "SOLD",
-          },
+          data: { status: "PENDING_SHIPMENT" },
         });
       }
     });

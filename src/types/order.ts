@@ -19,9 +19,14 @@ export interface PlaceOrderInput {
   type: "LIMIT" | "MARKET";
   price?: number; // cents, required for LIMIT
   quantity?: number; // defaults to 1
-  cardInstanceId?: string; // required for SELL
-  gradingCompany?: "PSA" | "BGS" | "CGC"; // optional filter for BUY
-  minGrade?: number; // optional filter for BUY
+  // SELL: provide cert details to list a physical card you own
+  certNumber?: string;
+  gradingCompany?: "PSA" | "BGS" | "CGC";
+  grade?: number;
+  // SELL: alternatively, reference an existing card instance
+  cardInstanceId?: string;
+  // BUY: optional filters
+  minGrade?: number;
   idempotencyKey?: string;
 }
 
