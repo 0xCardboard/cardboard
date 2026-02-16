@@ -20,9 +20,6 @@
     "test:coverage": "vitest run --coverage",
     "worker:card-sync": "npx tsx src/jobs/card-sync.worker.ts"
   },
-  "prisma": {
-    "seed": "npx tsx prisma/seed.ts"
-  },
   "dependencies": {
     "@prisma/adapter-pg": "^7.4.0",
     "@prisma/client": "^7.4.0",
