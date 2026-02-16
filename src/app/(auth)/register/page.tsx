@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import Link from "next/link";
 
 export default function RegisterPage() {
-  console.log("[register] component rendered (client)");
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -19,7 +18,6 @@ export default function RegisterPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    console.log("[register] form submitted", { name, email });
     setError("");
     setLoading(true);
 
@@ -29,8 +27,6 @@ export default function RegisterPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password }),
       });
-
-      console.log("[register] response status:", res.status);
 
       if (!res.ok) {
         const data = await res.json();
@@ -46,7 +42,6 @@ export default function RegisterPage() {
         redirect: false,
       });
 
-      console.log("[register] signIn result:", result);
       setLoading(false);
 
       if (result?.error) {
@@ -56,9 +51,8 @@ export default function RegisterPage() {
 
       router.push("/cards");
       router.refresh();
-    } catch (err) {
-      console.error("[register] error:", err);
-      setError("Something went wrong. Check the console for details.");
+    } catch {
+      setError("Something went wrong. Please try again.");
       setLoading(false);
     }
   }
