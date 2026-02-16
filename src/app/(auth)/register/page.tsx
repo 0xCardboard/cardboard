@@ -1,16 +1,15 @@
-"use client";
-
-import { useActionState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
-import { registerAction, type RegisterState } from "./actions";
+import { registerAction } from "./actions";
 
-const initialState: RegisterState = {};
-
-export default function RegisterPage() {
-  const [state, formAction, isPending] = useActionState(registerAction, initialState);
+export default async function RegisterPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const { error } = await searchParams;
 
   return (
     <Card className="w-full max-w-md">
@@ -19,10 +18,10 @@ export default function RegisterPage() {
         <CardDescription>Start trading graded TCG cards today</CardDescription>
       </CardHeader>
       <CardContent>
-        <form action={formAction} className="space-y-4">
-          {state.error && (
+        <form action={registerAction} className="space-y-4">
+          {error && (
             <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-              {state.error}
+              {error}
             </div>
           )}
           <div className="space-y-2">
@@ -64,8 +63,8 @@ export default function RegisterPage() {
               Must be at least 8 characters
             </p>
           </div>
-          <Button className="w-full" type="submit" disabled={isPending}>
-            {isPending ? "Creating account..." : "Create Account"}
+          <Button className="w-full" type="submit">
+            Create Account
           </Button>
         </form>
         <p className="mt-4 text-center text-sm text-muted-foreground">

@@ -6,19 +6,12 @@ import { encode } from "next-auth/jwt";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 
-export type LoginState = {
-  error?: string;
-};
-
-export async function loginAction(
-  _prevState: LoginState,
-  formData: FormData
-): Promise<LoginState> {
+export async function loginAction(formData: FormData): Promise<void> {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
 
   if (!email || !password) {
-    return { error: "Email and password are required" };
+    redirect("/login?error=" + encodeURIComponent("Email and password are required"));
   }
 
   const user = await prisma.user.findUnique({
@@ -26,13 +19,13 @@ export async function loginAction(
   });
 
   if (!user) {
-    return { error: "Invalid email or password" };
+    redirect("/login?error=" + encodeURIComponent("Invalid email or password"));
   }
 
   const passwordMatch = await bcrypt.compare(password, user.passwordHash);
 
   if (!passwordMatch) {
-    return { error: "Invalid email or password" };
+    redirect("/login?error=" + encodeURIComponent("Invalid email or password"));
   }
 
   // Create session token and set cookie

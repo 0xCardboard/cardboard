@@ -6,24 +6,17 @@ import { encode } from "next-auth/jwt";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 
-export type RegisterState = {
-  error?: string;
-};
-
-export async function registerAction(
-  _prevState: RegisterState,
-  formData: FormData
-): Promise<RegisterState> {
+export async function registerAction(formData: FormData): Promise<void> {
   const name = formData.get("name") as string;
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
 
   if (!email || !password) {
-    return { error: "Email and password are required" };
+    redirect("/register?error=" + encodeURIComponent("Email and password are required"));
   }
 
   if (password.length < 8) {
-    return { error: "Password must be at least 8 characters" };
+    redirect("/register?error=" + encodeURIComponent("Password must be at least 8 characters"));
   }
 
   const existingUser = await prisma.user.findUnique({
@@ -31,7 +24,7 @@ export async function registerAction(
   });
 
   if (existingUser) {
-    return { error: "An account with this email already exists" };
+    redirect("/register?error=" + encodeURIComponent("An account with this email already exists"));
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
