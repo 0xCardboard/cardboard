@@ -21,35 +21,40 @@ export default function RegisterPage() {
     setError("");
     setLoading(true);
 
-    const res = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
-    });
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      });
 
-    if (!res.ok) {
-      const data = await res.json();
-      setError(data.error || "Something went wrong");
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || "Something went wrong");
+        setLoading(false);
+        return;
+      }
+
+      // Auto sign-in after registration
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
       setLoading(false);
-      return;
+
+      if (result?.error) {
+        setError("Account created but sign-in failed. Please sign in manually.");
+        return;
+      }
+
+      router.push("/cards");
+      router.refresh();
+    } catch {
+      setError("Something went wrong. Please try again.");
+      setLoading(false);
     }
-
-    // Auto sign-in after registration
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
-
-    setLoading(false);
-
-    if (result?.error) {
-      setError("Account created but sign-in failed. Please sign in manually.");
-      return;
-    }
-
-    router.push("/cards");
-    router.refresh();
   }
 
   return (
