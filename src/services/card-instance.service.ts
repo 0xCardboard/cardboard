@@ -41,6 +41,14 @@ export async function registerCardInstance(
     throw new AppError("CONFLICT", `Cert number already registered: ${input.certNumber}`);
   }
 
+  // Only PSA graded cards accepted at launch
+  if (input.gradingCompany !== "PSA") {
+    throw new AppError(
+      "VALIDATION_ERROR",
+      "Only PSA graded cards are accepted at this time. BGS and CGC support coming soon.",
+    );
+  }
+
   // Validate grade range
   if (input.grade < 1 || input.grade > 10) {
     throw new AppError("VALIDATION_ERROR", "Grade must be between 1 and 10");

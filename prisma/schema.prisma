@@ -325,6 +325,7 @@ model Trade {
   stripeRefundId   String?
   escrowStatus     EscrowStatus @default(PENDING)
   paymentFailedAt  DateTime?
+  shipDeadline     DateTime?    // When seller must ship by (3 business days)
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
 
