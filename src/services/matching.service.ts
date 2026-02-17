@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { processTradePayment } from "@/services/escrow.service";
 
 const PLATFORM_FEE_RATE = parseFloat(process.env.PLATFORM_FEE_RATE || "0.03");
 
@@ -45,6 +46,8 @@ export async function matchOrder(orderId: string): Promise<MatchResult> {
     const tradePrice = matchingOrder.price!;
 
     // Execute the trade in a transaction
+    let tradeId: string | null = null;
+
     await prisma.$transaction(async (tx) => {
       // Determine buyer and seller
       const buyOrder = order.side === "BUY" ? order : matchingOrder;
@@ -53,7 +56,7 @@ export async function matchOrder(orderId: string): Promise<MatchResult> {
       // Create trade
       const feeAmount = Math.round(tradePrice * fillQty * PLATFORM_FEE_RATE);
 
-      await tx.trade.create({
+      const trade = await tx.trade.create({
         data: {
           buyOrderId: buyOrder.id,
           sellOrderId: sellOrder.id,
@@ -70,6 +73,8 @@ export async function matchOrder(orderId: string): Promise<MatchResult> {
           },
         },
       });
+
+      tradeId = trade.id;
 
       // Update the incoming order
       const newFilledQty = order.filledQuantity + (order.quantity - order.filledQuantity - remainingQty + fillQty);
@@ -106,6 +111,13 @@ export async function matchOrder(orderId: string): Promise<MatchResult> {
         });
       }
     });
+
+    // Process payment outside the DB transaction (Stripe API calls should not be in transactions)
+    if (tradeId) {
+      processTradePayment(tradeId).catch(() => {
+        // Payment processing is handled async — failure enqueues retry via BullMQ
+      });
+    }
 
     tradesCreated++;
     ordersUpdated += 2;

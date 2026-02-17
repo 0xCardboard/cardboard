@@ -57,6 +57,7 @@ describe("order.service", () => {
   describe("placeOrder", () => {
     it("creates a BUY LIMIT order", async () => {
       (prisma.card.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "card-1" });
+      (prisma.paymentMethod.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "pm-1", isDefault: true });
       (prisma.orderBook.upsert as ReturnType<typeof vi.fn>).mockResolvedValue(mockOrderBook);
       (prisma.order.create as ReturnType<typeof vi.fn>).mockResolvedValue(mockOrder);
       // Re-fetch after matching returns the same order
@@ -90,6 +91,7 @@ describe("order.service", () => {
 
     it("throws VALIDATION_ERROR for LIMIT order without price", async () => {
       (prisma.card.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "card-1" });
+      (prisma.paymentMethod.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "pm-1", isDefault: true });
 
       await expect(
         placeOrder("user-1", {
@@ -102,6 +104,7 @@ describe("order.service", () => {
 
     it("throws VALIDATION_ERROR for negative price", async () => {
       (prisma.card.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "card-1" });
+      (prisma.paymentMethod.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "pm-1", isDefault: true });
 
       await expect(
         placeOrder("user-1", {
@@ -272,6 +275,7 @@ describe("order.service", () => {
 
     it("returns existing order for duplicate idempotency key", async () => {
       (prisma.card.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "card-1" });
+      (prisma.paymentMethod.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "pm-1", isDefault: true });
       (prisma.order.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(mockOrder);
 
       const result = await placeOrder("user-1", {

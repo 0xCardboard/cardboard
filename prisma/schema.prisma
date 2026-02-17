@@ -50,9 +50,10 @@ enum OrderStatus {
 
 enum EscrowStatus {
   PENDING
-  AUTHORIZED
+  PAYMENT_FAILED
   CAPTURED
   RELEASED
+  REFUNDED
   CANCELLED
 }
 
@@ -67,6 +68,7 @@ enum ShipmentStatus {
   IN_TRANSIT
   DELIVERED
   RETURNED
+  EXCEPTION
 }
 
 enum LoanStatus {
@@ -92,7 +94,26 @@ enum NotificationType {
   CARD_VERIFICATION_FAILED
   ESCROW_RELEASED
   SHIPMENT_UPDATE
+  DISPUTE_OPENED
+  DISPUTE_RESOLVED
   SYSTEM
+}
+
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED_REFUND
+  RESOLVED_REPLACEMENT
+  RESOLVED_REJECTED
+  CLOSED
+}
+
+enum DisputeReason {
+  SHIPPING_DAMAGE
+  WRONG_CARD
+  GRADE_DISCREPANCY
+  NON_DELIVERY
+  OTHER
 }
 
 // ─── Users & Auth ───────────────────────────────────────
@@ -103,25 +124,29 @@ model User {
   passwordHash    String
   name            String?
   avatarUrl       String?
-  stripeAccountId String?
-  role            UserRole @default(USER)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  stripeAccountId  String?
+  stripeCustomerId String?
+  role             UserRole @default(USER)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  reputation      Reputation?
-  reviewsGiven    Review[]       @relation("ReviewsGiven")
-  reviewsReceived Review[]       @relation("ReviewsReceived")
-  cardInstances   CardInstance[]
-  orders          Order[]
-  buyTrades       Trade[]        @relation("BuyTrades")
-  sellTrades      Trade[]        @relation("SellTrades")
-  shipments       Shipment[]
-  loansAsBorrower Loan[]         @relation("Borrower")
-  loansAsLender   Loan[]         @relation("Lender")
-  loanOffers      LoanOffer[]
-  verifiedCards   CardInstance[] @relation("VerifiedBy")
-  refreshTokens   RefreshToken[]
-  notifications   Notification[]
+  reputation       Reputation?
+  reviewsGiven     Review[]        @relation("ReviewsGiven")
+  reviewsReceived  Review[]        @relation("ReviewsReceived")
+  cardInstances    CardInstance[]
+  orders           Order[]
+  buyTrades        Trade[]         @relation("BuyTrades")
+  sellTrades       Trade[]         @relation("SellTrades")
+  shipments        Shipment[]
+  loansAsBorrower  Loan[]          @relation("Borrower")
+  loansAsLender    Loan[]          @relation("Lender")
+  loanOffers       LoanOffer[]
+  verifiedCards    CardInstance[]  @relation("VerifiedBy")
+  refreshTokens    RefreshToken[]
+  notifications    Notification[]
+  paymentMethods   PaymentMethod[]
+  disputesFiled    Dispute[]       @relation("DisputesFiled")
+  disputesResolved Dispute[]       @relation("DisputesResolved")
 }
 
 model Reputation {
@@ -287,24 +312,29 @@ model Order {
 }
 
 model Trade {
-  id              String       @id @default(cuid())
-  buyOrderId      String
-  sellOrderId     String
-  price           Int          // cents
-  quantity        Int          @default(1)
-  buyerId         String
-  sellerId        String
-  stripePaymentId String?
-  escrowStatus    EscrowStatus @default(PENDING)
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  id               String       @id @default(cuid())
+  buyOrderId       String
+  sellOrderId      String
+  price            Int          // cents
+  quantity         Int          @default(1)
+  buyerId          String
+  sellerId         String
+  stripePaymentId  String?
+  stripeTransferId String?
+  stripeRefundId   String?
+  escrowStatus     EscrowStatus @default(PENDING)
+  paymentFailedAt  DateTime?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
 
-  buyOrder  Order    @relation("BuyOrder", fields: [buyOrderId], references: [id], onDelete: Cascade)
-  sellOrder Order    @relation("SellOrder", fields: [sellOrderId], references: [id], onDelete: Cascade)
-  buyer     User     @relation("BuyTrades", fields: [buyerId], references: [id], onDelete: Cascade)
-  seller    User     @relation("SellTrades", fields: [sellerId], references: [id], onDelete: Cascade)
+  buyOrder  Order      @relation("BuyOrder", fields: [buyOrderId], references: [id], onDelete: Cascade)
+  sellOrder Order      @relation("SellOrder", fields: [sellOrderId], references: [id], onDelete: Cascade)
+  buyer     User       @relation("BuyTrades", fields: [buyerId], references: [id], onDelete: Cascade)
+  seller    User       @relation("SellTrades", fields: [sellerId], references: [id], onDelete: Cascade)
   reviews   Review[]
   fee       TradeFee?
+  shipments Shipment[]
+  disputes  Dispute[]
 }
 
 // ─── Trade Fees ─────────────────────────────────────────
@@ -355,21 +385,87 @@ model Notification {
 // ─── Shipping ───────────────────────────────────────────
 
 model Shipment {
-  id             String            @id @default(cuid())
-  cardInstanceId String
-  userId         String
-  direction      ShipmentDirection
-  trackingNumber String?
-  carrier        String?
-  status         ShipmentStatus    @default(LABEL_CREATED)
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
+  id                String            @id @default(cuid())
+  cardInstanceId    String
+  userId            String
+  tradeId           String?
+  direction         ShipmentDirection
+  trackingNumber    String?
+  carrier           String?
+  status            ShipmentStatus    @default(LABEL_CREATED)
+  estimatedDelivery DateTime?
+  deliveredAt       DateTime?
+  notes             String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 
   cardInstance CardInstance @relation(fields: [cardInstanceId], references: [id], onDelete: Cascade)
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trade        Trade?       @relation(fields: [tradeId], references: [id])
 
   @@index([cardInstanceId])
   @@index([userId])
+  @@index([tradeId])
+}
+
+// ─── Payment Methods ─────────────────────────────────
+
+model PaymentMethod {
+  id                    String   @id @default(cuid())
+  userId                String
+  stripePaymentMethodId String   @unique
+  last4                 String
+  brand                 String
+  expMonth              Int
+  expYear               Int
+  isDefault             Boolean  @default(false)
+  createdAt             DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ─── Disputes ────────────────────────────────────────
+
+model Dispute {
+  id           String        @id @default(cuid())
+  tradeId      String
+  userId       String
+  reason       DisputeReason
+  description  String
+  evidence     String[]      @default([])
+  status       DisputeStatus @default(OPEN)
+  adminNotes   String?
+  resolvedById String?
+  resolvedAt   DateTime?
+  refundAmount Int?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  trade      Trade @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  user       User  @relation("DisputesFiled", fields: [userId], references: [id])
+  resolvedBy User? @relation("DisputesResolved", fields: [resolvedById], references: [id])
+
+  @@unique([tradeId, userId])
+  @@index([status])
+}
+
+// ─── Trading Alerts ──────────────────────────────────
+
+model TradingAlert {
+  id           String    @id @default(cuid())
+  tradeId      String?
+  userId       String?
+  alertType    String
+  description  String
+  severity     String
+  reviewedAt   DateTime?
+  reviewedById String?
+  dismissed    Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+
+  @@index([alertType, reviewedAt])
 }
 
 // ─── Phase 2: Lending ───────────────────────────────────
