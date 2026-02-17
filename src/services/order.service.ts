@@ -136,6 +136,14 @@ export async function placeOrder(
         );
       }
 
+      // Only PSA graded cards accepted at launch
+      if (input.gradingCompany !== "PSA") {
+        throw new AppError(
+          "VALIDATION_ERROR",
+          "Only PSA graded cards are accepted at this time. BGS and CGC support coming soon.",
+        );
+      }
+
       if (input.grade < 1 || input.grade > 10) {
         throw new AppError("VALIDATION_ERROR", "Grade must be between 1 and 10");
       }
@@ -200,7 +208,7 @@ export async function placeOrder(
   }
 
   // Run matching inline so orders fill immediately
-  await matchOrder(order.id);
+  const matchResult = await matchOrder(order.id);
 
   // Also enqueue a background job as a safety-net retry (best-effort, non-blocking)
   orderMatchingQueue
@@ -216,10 +224,35 @@ export async function placeOrder(
   // Re-fetch the order to reflect any fills from matching
   const updatedOrder = await prisma.order.findUnique({
     where: { id: order.id },
+    include: { ...ORDER_INCLUDE, cardInstance: true },
+  });
+
+  // If a market sell order was cancelled (fill-or-kill), clean up the card instance
+  if (
+    matchResult.cancelledRemainder > 0 &&
+    input.side === "SELL" &&
+    updatedOrder?.status === "CANCELLED" &&
+    updatedOrder.cardInstanceId
+  ) {
+    if (updatedOrder.cardInstance && !updatedOrder.cardInstance.verifiedAt) {
+      // Path A: card was never shipped/verified, safe to delete
+      await prisma.cardInstance.delete({ where: { id: updatedOrder.cardInstanceId } });
+    } else if (updatedOrder.cardInstance) {
+      // Path B: revert verified card back to VERIFIED
+      await prisma.cardInstance.update({
+        where: { id: updatedOrder.cardInstanceId },
+        data: { status: "VERIFIED" },
+      });
+    }
+  }
+
+  // Re-fetch again after potential cleanup
+  const finalOrder = await prisma.order.findUnique({
+    where: { id: order.id },
     include: ORDER_INCLUDE,
   });
 
-  return transformOrder(updatedOrder ?? order);
+  return transformOrder(finalOrder ?? updatedOrder ?? order);
 }
 
 export async function cancelOrder(

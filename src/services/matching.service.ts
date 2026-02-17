@@ -1,11 +1,13 @@
 import { prisma } from "@/lib/db";
 import { processTradePayment } from "@/services/escrow.service";
+import { createNotification } from "@/services/notification.service";
 
-const PLATFORM_FEE_RATE = parseFloat(process.env.PLATFORM_FEE_RATE || "0.03");
+const PLATFORM_FEE_RATE = parseFloat(process.env.PLATFORM_FEE_RATE || "0.05");
 
 interface MatchResult {
   tradesCreated: number;
   ordersUpdated: number;
+  cancelledRemainder: number;
 }
 
 /**
@@ -22,11 +24,11 @@ export async function matchOrder(orderId: string): Promise<MatchResult> {
     include: { orderBook: true },
   });
 
-  if (!order) return { tradesCreated: 0, ordersUpdated: 0 };
+  if (!order) return { tradesCreated: 0, ordersUpdated: 0, cancelledRemainder: 0 };
 
   // Only match OPEN or PARTIALLY_FILLED orders
   if (order.status !== "OPEN" && order.status !== "PARTIALLY_FILLED") {
-    return { tradesCreated: 0, ordersUpdated: 0 };
+    return { tradesCreated: 0, ordersUpdated: 0, cancelledRemainder: 0 };
   }
 
   let remainingQty = order.quantity - order.filledQuantity;
@@ -124,7 +126,37 @@ export async function matchOrder(orderId: string): Promise<MatchResult> {
     remainingQty -= fillQty;
   }
 
-  return { tradesCreated, ordersUpdated };
+  // Fill-or-kill: market orders that can't fully fill get their remainder cancelled
+  let cancelledRemainder = 0;
+  if (order.type === "MARKET" && remainingQty > 0) {
+    cancelledRemainder = remainingQty;
+    const filledQty = order.quantity - remainingQty;
+
+    await prisma.order.update({
+      where: { id: order.id },
+      data: { status: "CANCELLED" },
+    });
+
+    if (filledQty > 0) {
+      await createNotification(
+        order.userId,
+        "ORDER_CANCELLED",
+        "Market Order Partially Filled",
+        `Your market ${order.side} order was partially filled (${filledQty}/${order.quantity}). The remaining ${remainingQty} cancelled due to insufficient liquidity.`,
+        { orderId: order.id, filledQty, cancelledQty: remainingQty },
+      );
+    } else {
+      await createNotification(
+        order.userId,
+        "ORDER_CANCELLED",
+        "Market Order Cancelled",
+        `Your market ${order.side} order was cancelled — no matching orders available.`,
+        { orderId: order.id },
+      );
+    }
+  }
+
+  return { tradesCreated, ordersUpdated, cancelledRemainder };
 }
 
 /**

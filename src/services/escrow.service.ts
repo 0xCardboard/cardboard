@@ -2,9 +2,28 @@ import { prisma } from "@/lib/db";
 import { AppError } from "@/lib/errors";
 import { chargeForTrade, payoutToSeller, refundBuyer } from "@/services/payment.service";
 import { createNotification } from "@/services/notification.service";
-import { paymentProcessingQueue } from "@/jobs/queue";
+import { paymentProcessingQueue, shipDeadlineQueue } from "@/jobs/queue";
 
 const PAYMENT_RETRY_DEADLINE_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+/**
+ * Calculate delay in ms for N business days from now (skips Sat/Sun).
+ */
+function businessDayDelayMs(days: number): number {
+  const now = new Date();
+  let remaining = days;
+  const target = new Date(now);
+
+  while (remaining > 0) {
+    target.setDate(target.getDate() + 1);
+    const dayOfWeek = target.getDay();
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+      remaining--;
+    }
+  }
+
+  return target.getTime() - now.getTime();
+}
 
 /**
  * Process payment for a trade after order matching.
@@ -28,9 +47,31 @@ export async function processTradePayment(tradeId: string): Promise<void> {
         trade.sellerId,
         "TRADE_FILLED",
         "Order Filled",
-        `Your sell order was filled at $${(trade.price / 100).toFixed(2)}. Ship your card to complete the trade.`,
+        `Your sell order was filled at $${(trade.price / 100).toFixed(2)}. Ship your card within 3 business days to complete the trade.`,
         { tradeId },
       );
+
+      // Set ship deadline and enqueue deadline check job
+      const deadlineDelay = businessDayDelayMs(3);
+      const shipDeadline = new Date(Date.now() + deadlineDelay);
+
+      await prisma.trade.update({
+        where: { id: tradeId },
+        data: { shipDeadline },
+      });
+
+      shipDeadlineQueue
+        .add(
+          "check-shipment",
+          { tradeId },
+          {
+            delay: deadlineDelay,
+            jobId: `ship-deadline-${tradeId}`,
+          },
+        )
+        .catch(() => {
+          // Queue unavailable — will need manual monitoring
+        });
     }
   } catch {
     // Payment failed — enqueue retry
