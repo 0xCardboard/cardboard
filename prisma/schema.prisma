@@ -147,6 +147,7 @@ model User {
   paymentMethods   PaymentMethod[]
   disputesFiled    Dispute[]       @relation("DisputesFiled")
   disputesResolved Dispute[]       @relation("DisputesResolved")
+  settings         UserSettings?
 }
 
 model Reputation {
@@ -509,4 +510,39 @@ model LoanOffer {
 
   @@index([loanId])
   @@index([lenderId])
+}
+
+// ─── User Settings ──────────────────────────────────
+
+model UserSettings {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  // Notification preferences
+  notifyTradeFilled      Boolean @default(true)
+  notifyOrderUpdates     Boolean @default(true)
+  notifyCardVerified     Boolean @default(true)
+  notifyEscrowReleased   Boolean @default(true)
+  notifyShipmentUpdate   Boolean @default(true)
+  notifyDisputeUpdate    Boolean @default(true)
+  notifyPriceAlerts      Boolean @default(true)
+  notifyNewListings      Boolean @default(true)
+  notifyLendingUpdates   Boolean @default(true)
+  notifyAnnouncements    Boolean @default(true)
+
+  // Email preferences
+  emailDigest Boolean @default(true)
+
+  // Display preferences
+  theme    String @default("dark")
+  currency String @default("USD")
+
+  // Privacy
+  profilePublic    Boolean @default(true)
+  showTradeHistory Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
