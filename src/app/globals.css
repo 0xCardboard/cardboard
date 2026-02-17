@@ -49,7 +49,7 @@
 }
 
 /* ── Dark luxury palette ─────────────────────────────────── */
-:root {
+:root, .dark {
   --background: oklch(0.13 0.005 260);
   --foreground: oklch(0.95 0.01 80);
   --card: oklch(0.16 0.005 260);
