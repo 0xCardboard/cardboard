@@ -8,7 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CreditCard, Plus, Trash2, Star, Loader2, AlertCircle } from "lucide-react";
 
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+  ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
+  : null;
 
 interface PaymentMethod {
   id: string;
@@ -251,15 +253,30 @@ export function PaymentMethodsTab() {
       </div>
 
       {showAddForm && (
-        <Elements stripe={stripePromise}>
-          <AddCardForm
-            onSuccess={() => {
-              setShowAddForm(false);
-              fetchMethods();
-            }}
-            onCancel={() => setShowAddForm(false)}
-          />
-        </Elements>
+        stripePromise ? (
+          <Elements stripe={stripePromise}>
+            <AddCardForm
+              onSuccess={() => {
+                setShowAddForm(false);
+                fetchMethods();
+              }}
+              onCancel={() => setShowAddForm(false)}
+            />
+          </Elements>
+        ) : (
+          <div className="rounded-2xl border border-border/50 bg-card/50 p-6">
+            <div className="flex items-center gap-2 text-sm text-yellow-400 mb-3">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              Stripe is not configured
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Payment methods require the <code className="text-xs bg-muted px-1.5 py-0.5 rounded">NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code> environment variable to be set.
+            </p>
+            <Button variant="ghost" size="sm" className="mt-3" onClick={() => setShowAddForm(false)}>
+              Close
+            </Button>
+          </div>
+        )
       )}
 
       {methods.length === 0 && !showAddForm ? (
