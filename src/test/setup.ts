@@ -6,10 +6,41 @@ process.env.JWT_REFRESH_SECRET = "test-refresh-secret-at-least-32-chars!!";
 process.env.DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/cardboard_test";
 process.env.REDIS_URL = "redis://localhost:6379";
 process.env.PLATFORM_FEE_RATE = "0.03";
+process.env.STRIPE_SECRET_KEY = "sk_test_mock";
+process.env.STRIPE_WEBHOOK_SECRET = "whsec_mock";
 
 // Mock Prisma
 vi.mock("@/lib/db", () => ({
   prisma: createMockPrismaClient(),
+}));
+
+// Mock Stripe
+vi.mock("@/lib/stripe", () => ({
+  stripe: {
+    customers: { create: vi.fn(), retrieve: vi.fn() },
+    setupIntents: { create: vi.fn() },
+    paymentIntents: { create: vi.fn() },
+    paymentMethods: { attach: vi.fn(), retrieve: vi.fn(), detach: vi.fn() },
+    refunds: { create: vi.fn() },
+    transfers: { create: vi.fn() },
+    accounts: { create: vi.fn(), retrieve: vi.fn() },
+    accountLinks: { create: vi.fn() },
+    webhooks: { constructEvent: vi.fn() },
+  },
+}));
+
+// Mock BullMQ queues
+vi.mock("@/jobs/queue", () => ({
+  QUEUE_NAMES: {
+    CARD_SYNC: "card-sync",
+    ORDER_MATCHING: "order-matching",
+    LOAN_MONITOR: "loan-monitor",
+    PAYMENT_PROCESSING: "payment-processing",
+  },
+  cardSyncQueue: { add: vi.fn().mockResolvedValue({}) },
+  orderMatchingQueue: { add: vi.fn().mockResolvedValue({}) },
+  loanMonitorQueue: { add: vi.fn().mockResolvedValue({}) },
+  paymentProcessingQueue: { add: vi.fn().mockResolvedValue({}) },
 }));
 
 function createMockModel() {

@@ -11,6 +11,7 @@ export function createMockUser(overrides: Partial<User> = {}): User {
     name: `Test User ${counter}`,
     avatarUrl: null,
     stripeAccountId: null,
+    stripeCustomerId: null,
     role: "USER" as const,
     createdAt: new Date("2025-01-01"),
     updatedAt: new Date("2025-01-01"),

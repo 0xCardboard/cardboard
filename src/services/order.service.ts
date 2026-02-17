@@ -50,6 +50,19 @@ export async function placeOrder(
     throw new AppError("NOT_FOUND", `Card not found: ${input.cardId}`);
   }
 
+  // BUY orders require a payment method on file
+  if (input.side === "BUY") {
+    const defaultPm = await prisma.paymentMethod.findFirst({
+      where: { userId, isDefault: true },
+    });
+    if (!defaultPm) {
+      throw new AppError(
+        "VALIDATION_ERROR",
+        "A payment method is required to place buy orders. Add a card first.",
+      );
+    }
+  }
+
   const quantity = input.quantity ?? 1;
   if (quantity < 1) {
     throw new AppError("VALIDATION_ERROR", "Quantity must be at least 1");
