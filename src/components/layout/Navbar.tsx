@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { LogOut, Menu, User, X } from "lucide-react";
@@ -8,6 +9,7 @@ import { useState } from "react";
 
 export function Navbar() {
   const { user, status, logout } = useAuth();
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
@@ -55,15 +57,15 @@ export function Navbar() {
             <div className="h-8 w-24 animate-pulse rounded-lg bg-muted" />
           ) : user ? (
             <>
-              <Link
-                href={`/profile/${user.id}`}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-accent/50"
+              <button
+                onClick={() => router.push(`/profile/${user.id}`)}
+                className="relative z-[60] flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-accent/50 cursor-pointer"
               >
                 <div className="h-6 w-6 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
                   <User className="h-3.5 w-3.5 text-primary" />
                 </div>
                 {user.name || user.email}
-              </Link>
+              </button>
               <Button
                 variant="ghost"
                 size="sm"
@@ -127,14 +129,13 @@ export function Navbar() {
             <div className="pt-3 border-t border-border/40">
               {user ? (
                 <div className="space-y-1">
-                  <Link
-                    href={`/profile/${user.id}`}
-                    className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent/50"
-                    onClick={() => setMobileOpen(false)}
+                  <button
+                    onClick={() => { router.push(`/profile/${user.id}`); setMobileOpen(false); }}
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent/50 cursor-pointer w-full"
                   >
                     <User className="h-3.5 w-3.5" />
                     My Profile
-                  </Link>
+                  </button>
                   <Button
                     variant="ghost"
                     size="sm"
