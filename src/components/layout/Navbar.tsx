@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { Button } from "@/components/ui/button";
-import { LogOut, Menu, X } from "lucide-react";
+import { LogOut, Menu, User, X } from "lucide-react";
 import { useState } from "react";
 
 export function Navbar() {
@@ -55,7 +55,15 @@ export function Navbar() {
             <div className="h-8 w-24 animate-pulse rounded-lg bg-muted" />
           ) : user ? (
             <>
-              <span className="text-sm text-muted-foreground">{user.name || user.email}</span>
+              <Link
+                href={`/profile/${user.id}`}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-accent/50"
+              >
+                <div className="h-6 w-6 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
+                  <User className="h-3.5 w-3.5 text-primary" />
+                </div>
+                {user.name || user.email}
+              </Link>
               <Button
                 variant="ghost"
                 size="sm"
@@ -118,15 +126,25 @@ export function Navbar() {
             )}
             <div className="pt-3 border-t border-border/40">
               {user ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => { logout(); setMobileOpen(false); }}
-                  className="w-full justify-start gap-2 text-muted-foreground"
-                >
-                  <LogOut className="h-3.5 w-3.5" />
-                  Sign Out
-                </Button>
+                <div className="space-y-1">
+                  <Link
+                    href={`/profile/${user.id}`}
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <User className="h-3.5 w-3.5" />
+                    My Profile
+                  </Link>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => { logout(); setMobileOpen(false); }}
+                    className="w-full justify-start gap-2 text-muted-foreground"
+                  >
+                    <LogOut className="h-3.5 w-3.5" />
+                    Sign Out
+                  </Button>
+                </div>
               ) : (
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" asChild className="flex-1">
