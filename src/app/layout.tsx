@@ -5,8 +5,8 @@ import { SessionProvider } from "@/components/providers/SessionProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Cardboard — P2P TCG Card Marketplace",
-  description: "Trade graded TCG cards on a peer-to-peer exchange. Pokemon, One Piece, and more.",
+  title: "Cardboard — P2P TCG Card Exchange",
+  description: "The peer-to-peer exchange for authenticated, graded trading cards. Trade Pokemon, One Piece, and more with real order books and 5% fees.",
 };
 
 export default function RootLayout({
@@ -15,12 +15,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <body className="antialiased">
         <SessionProvider>
-          <div className="relative flex min-h-screen flex-col">
+          <div className="relative flex min-h-screen flex-col noise">
             <Navbar />
-            <main className="flex-1">{children}</main>
+            <main className="relative z-10 flex-1">{children}</main>
             <Footer />
           </div>
         </SessionProvider>

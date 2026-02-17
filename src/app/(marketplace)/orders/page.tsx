@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { formatPrice } from "@/lib/format";
 import type { OrderWithDetails } from "@/types/order";
+import { Loader2, X } from "lucide-react";
 
 interface PaginationData {
   page: number;
@@ -104,83 +105,73 @@ export default function OrdersPage() {
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-6">My Orders</h1>
-        <p className="text-muted-foreground">Loading orders...</p>
+        <h1 className="text-3xl font-bold mb-6 font-[family-name:var(--font-display)]">My Orders</h1>
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Loading orders...
+        </div>
       </div>
     );
   }
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">My Orders</h1>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold font-[family-name:var(--font-display)]">My Orders</h1>
+        <p className="text-muted-foreground mt-1">Track and manage your open and filled orders.</p>
+      </div>
 
       {/* Filters */}
       <div className="flex gap-2 mb-6 flex-wrap">
-        <Button
-          variant={sideFilter === "" ? "default" : "outline"}
-          size="sm"
-          onClick={() => { setSideFilter(""); setPage(1); }}
-        >
-          All
-        </Button>
-        <Button
-          variant={sideFilter === "BUY" ? "default" : "outline"}
-          size="sm"
-          onClick={() => { setSideFilter("BUY"); setPage(1); }}
-        >
-          Buys
-        </Button>
-        <Button
-          variant={sideFilter === "SELL" ? "default" : "outline"}
-          size="sm"
-          onClick={() => { setSideFilter("SELL"); setPage(1); }}
-        >
-          Sells
-        </Button>
-        <span className="border-l mx-2" />
-        <Button
-          variant={statusFilter === "" ? "secondary" : "ghost"}
-          size="sm"
-          onClick={() => { setStatusFilter(""); setPage(1); }}
-        >
-          Any Status
-        </Button>
-        <Button
-          variant={statusFilter === "OPEN" ? "secondary" : "ghost"}
-          size="sm"
-          onClick={() => { setStatusFilter("OPEN"); setPage(1); }}
-        >
-          Open
-        </Button>
-        <Button
-          variant={statusFilter === "FILLED" ? "secondary" : "ghost"}
-          size="sm"
-          onClick={() => { setStatusFilter("FILLED"); setPage(1); }}
-        >
-          Filled
-        </Button>
-        <Button
-          variant={statusFilter === "CANCELLED" ? "secondary" : "ghost"}
-          size="sm"
-          onClick={() => { setStatusFilter("CANCELLED"); setPage(1); }}
-        >
-          Cancelled
-        </Button>
+        {[
+          { label: "All", value: "", type: "side" },
+          { label: "Buys", value: "BUY", type: "side" },
+          { label: "Sells", value: "SELL", type: "side" },
+        ].map((f) => (
+          <Button
+            key={f.label}
+            variant={sideFilter === f.value ? "default" : "outline"}
+            size="sm"
+            className="rounded-lg"
+            onClick={() => { setSideFilter(f.value); setPage(1); }}
+          >
+            {f.label}
+          </Button>
+        ))}
+        <span className="border-l border-border/40 mx-1" />
+        {[
+          { label: "Any Status", value: "" },
+          { label: "Open", value: "OPEN" },
+          { label: "Filled", value: "FILLED" },
+          { label: "Cancelled", value: "CANCELLED" },
+        ].map((f) => (
+          <Button
+            key={f.label}
+            variant={statusFilter === f.value ? "secondary" : "ghost"}
+            size="sm"
+            className="rounded-lg"
+            onClick={() => { setStatusFilter(f.value); setPage(1); }}
+          >
+            {f.label}
+          </Button>
+        ))}
       </div>
 
       {orders.length === 0 ? (
-        <p className="text-muted-foreground">
-          No orders found.{" "}
-          <Link href="/cards" className="text-primary hover:underline">
-            Browse cards
-          </Link>{" "}
-          to start trading.
-        </p>
+        <div className="rounded-2xl border border-border/50 bg-card/50 p-12 text-center">
+          <p className="text-muted-foreground">
+            No orders found.{" "}
+            <Link href="/cards" className="text-primary hover:underline">
+              Browse cards
+            </Link>{" "}
+            to start trading.
+          </p>
+        </div>
       ) : (
-        <>
+        <div className="rounded-2xl border border-border/50 bg-card/50 overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow>
+              <TableRow className="border-border/40 hover:bg-transparent">
                 <TableHead>Card</TableHead>
                 <TableHead>Side</TableHead>
                 <TableHead>Type</TableHead>
@@ -194,11 +185,11 @@ export default function OrdersPage() {
             </TableHeader>
             <TableBody>
               {orders.map((order) => (
-                <TableRow key={order.id}>
+                <TableRow key={order.id} className="border-border/30 hover:bg-accent/30">
                   <TableCell>
                     <Link
                       href={`/cards/${order.card.id}`}
-                      className="hover:underline font-medium"
+                      className="hover:underline font-medium hover:text-primary transition-colors"
                     >
                       {order.card.name}
                     </Link>
@@ -209,14 +200,15 @@ export default function OrdersPage() {
                   <TableCell>
                     <Badge
                       variant={order.side === "BUY" ? "default" : "destructive"}
+                      className="font-mono text-xs"
                     >
                       {order.side}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="text-muted-foreground text-sm">
                     {order.type}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right font-[family-name:var(--font-mono)]">
                     {order.avgFillPrice ? (
                       <>
                         {formatPrice(order.avgFillPrice)}
@@ -229,15 +221,13 @@ export default function OrdersPage() {
                     ) : order.price ? (
                       formatPrice(order.price)
                     ) : (
-                      "Market"
+                      <span className="text-muted-foreground">Market</span>
                     )}
                   </TableCell>
                   <TableCell className="text-right">{order.quantity}</TableCell>
-                  <TableCell className="text-right">
-                    {order.filledQuantity}
-                  </TableCell>
+                  <TableCell className="text-right">{order.filledQuantity}</TableCell>
                   <TableCell>
-                    <Badge variant={statusVariant(order.status)}>
+                    <Badge variant={statusVariant(order.status)} className="text-xs">
                       {order.status}
                     </Badge>
                   </TableCell>
@@ -245,15 +235,19 @@ export default function OrdersPage() {
                     {new Date(order.createdAt).toLocaleDateString()}
                   </TableCell>
                   <TableCell className="text-right">
-                    {(order.status === "OPEN" ||
-                      order.status === "PARTIALLY_FILLED") && (
+                    {(order.status === "OPEN" || order.status === "PARTIALLY_FILLED") && (
                       <Button
                         variant="ghost"
                         size="sm"
+                        className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
                         disabled={cancelling === order.id}
                         onClick={() => handleCancel(order.id)}
                       >
-                        {cancelling === order.id ? "..." : "Cancel"}
+                        {cancelling === order.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <X className="h-3.5 w-3.5" />
+                        )}
                       </Button>
                     )}
                   </TableCell>
@@ -264,7 +258,7 @@ export default function OrdersPage() {
 
           {/* Pagination */}
           {pagination && pagination.totalPages > 1 && (
-            <div className="flex items-center justify-between mt-4">
+            <div className="flex items-center justify-between px-6 py-4 border-t border-border/30">
               <p className="text-sm text-muted-foreground">
                 Page {pagination.page} of {pagination.totalPages} ({pagination.total} orders)
               </p>
@@ -272,6 +266,7 @@ export default function OrdersPage() {
                 <Button
                   variant="outline"
                   size="sm"
+                  className="rounded-lg"
                   disabled={page <= 1}
                   onClick={() => setPage((p) => p - 1)}
                 >
@@ -280,6 +275,7 @@ export default function OrdersPage() {
                 <Button
                   variant="outline"
                   size="sm"
+                  className="rounded-lg"
                   disabled={page >= pagination.totalPages}
                   onClick={() => setPage((p) => p + 1)}
                 >
@@ -288,7 +284,7 @@ export default function OrdersPage() {
               </div>
             </div>
           )}
-        </>
+        </div>
       )}
     </div>
   );

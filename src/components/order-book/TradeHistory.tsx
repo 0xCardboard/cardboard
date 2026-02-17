@@ -35,7 +35,7 @@ export function TradeHistory({ cardId }: TradeHistoryProps) {
           setTrades(json.data ?? []);
         }
       } catch {
-        // Silently fail - trades are supplementary info
+        // Silently fail
       } finally {
         setLoading(false);
       }
@@ -61,10 +61,10 @@ export function TradeHistory({ cardId }: TradeHistoryProps) {
 
   return (
     <div>
-      <h2 className="text-lg font-semibold mb-3">Recent Trades</h2>
+      <h2 className="text-lg font-semibold mb-3 font-[family-name:var(--font-display)]">Recent Trades</h2>
       <Table>
         <TableHeader>
-          <TableRow>
+          <TableRow className="border-border/30 hover:bg-transparent">
             <TableHead>Price</TableHead>
             <TableHead className="text-right">Qty</TableHead>
             <TableHead className="text-right">Time</TableHead>
@@ -72,12 +72,12 @@ export function TradeHistory({ cardId }: TradeHistoryProps) {
         </TableHeader>
         <TableBody>
           {trades.map((trade) => (
-            <TableRow key={trade.id}>
-              <TableCell className="font-medium">
+            <TableRow key={trade.id} className="border-border/20 hover:bg-accent/20">
+              <TableCell className="font-medium font-[family-name:var(--font-mono)]">
                 {formatPrice(trade.price)}
               </TableCell>
               <TableCell className="text-right">{trade.quantity}</TableCell>
-              <TableCell className="text-right text-muted-foreground">
+              <TableCell className="text-right text-muted-foreground text-sm">
                 {new Date(trade.createdAt).toLocaleString()}
               </TableCell>
             </TableRow>

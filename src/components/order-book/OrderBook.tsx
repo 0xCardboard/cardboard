@@ -30,15 +30,13 @@ export function OrderBook({ cardId, initialData }: OrderBookProps) {
 
   useEffect(() => {
     if (!initialData) fetchOrderBook();
-
-    // Poll every 5 seconds (will be replaced by WebSocket in Phase 1E)
     const interval = setInterval(fetchOrderBook, 5000);
     return () => clearInterval(interval);
   }, [fetchOrderBook, initialData]);
 
   if (loading) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
+      <div className="text-center py-8 text-muted-foreground text-sm">
         Loading order book...
       </div>
     );
@@ -46,7 +44,7 @@ export function OrderBook({ cardId, initialData }: OrderBookProps) {
 
   if (error) {
     return (
-      <div className="text-center py-8 text-destructive">{error}</div>
+      <div className="text-center py-8 text-destructive text-sm">{error}</div>
     );
   }
 
@@ -58,9 +56,9 @@ export function OrderBook({ cardId, initialData }: OrderBookProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Order Book</h2>
+        <h2 className="text-lg font-semibold font-[family-name:var(--font-display)]">Order Book</h2>
         {data.spread !== null && (
-          <span className="text-sm text-muted-foreground">
+          <span className="text-xs font-[family-name:var(--font-mono)] text-muted-foreground px-2 py-1 rounded-lg bg-secondary/50">
             Spread: {formatPrice(data.spread)}
           </span>
         )}
@@ -68,9 +66,12 @@ export function OrderBook({ cardId, initialData }: OrderBookProps) {
 
       {data.lastTradePrice !== null && (
         <div className="text-sm text-muted-foreground">
-          Last trade: {formatPrice(data.lastTradePrice)}
+          Last trade:{" "}
+          <span className="font-medium text-foreground font-[family-name:var(--font-mono)]">
+            {formatPrice(data.lastTradePrice)}
+          </span>
           {data.lastTradeTime && (
-            <span className="ml-2">
+            <span className="ml-2 text-xs">
               ({new Date(data.lastTradeTime).toLocaleString()})
             </span>
           )}
@@ -80,24 +81,19 @@ export function OrderBook({ cardId, initialData }: OrderBookProps) {
       <div className="grid grid-cols-2 gap-4">
         {/* Bids (buy orders) */}
         <div>
-          <div className="grid grid-cols-3 gap-1 text-xs font-medium text-muted-foreground pb-2 border-b">
+          <div className="grid grid-cols-3 gap-1 text-xs font-medium text-muted-foreground pb-2 border-b border-border/30">
             <span>Orders</span>
             <span className="text-right">Qty</span>
             <span className="text-right">Price</span>
           </div>
-          <div className="space-y-0.5 mt-1">
+          <div className="space-y-px mt-1">
             {data.bids.length === 0 ? (
-              <div className="text-xs text-muted-foreground py-2 text-center">
+              <div className="text-xs text-muted-foreground py-4 text-center">
                 No bids
               </div>
             ) : (
               data.bids.slice(0, 10).map((entry, i) => (
-                <OrderBookRow
-                  key={i}
-                  entry={entry}
-                  maxQty={maxBidQty}
-                  side="bid"
-                />
+                <OrderBookRow key={i} entry={entry} maxQty={maxBidQty} side="bid" />
               ))
             )}
           </div>
@@ -105,24 +101,19 @@ export function OrderBook({ cardId, initialData }: OrderBookProps) {
 
         {/* Asks (sell orders) */}
         <div>
-          <div className="grid grid-cols-3 gap-1 text-xs font-medium text-muted-foreground pb-2 border-b">
+          <div className="grid grid-cols-3 gap-1 text-xs font-medium text-muted-foreground pb-2 border-b border-border/30">
             <span>Price</span>
             <span className="text-right">Qty</span>
             <span className="text-right">Orders</span>
           </div>
-          <div className="space-y-0.5 mt-1">
+          <div className="space-y-px mt-1">
             {data.asks.length === 0 ? (
-              <div className="text-xs text-muted-foreground py-2 text-center">
+              <div className="text-xs text-muted-foreground py-4 text-center">
                 No asks
               </div>
             ) : (
               data.asks.slice(0, 10).map((entry, i) => (
-                <OrderBookRow
-                  key={i}
-                  entry={entry}
-                  maxQty={maxAskQty}
-                  side="ask"
-                />
+                <OrderBookRow key={i} entry={entry} maxQty={maxAskQty} side="ask" />
               ))
             )}
           </div>
@@ -142,33 +133,31 @@ function OrderBookRow({
   side: "bid" | "ask";
 }) {
   const pct = (entry.quantity / maxQty) * 100;
-  const bgColor = side === "bid" ? "bg-green-500/10" : "bg-red-500/10";
-  const textColor = side === "bid" ? "text-green-600" : "text-red-600";
+  const bgColor = side === "bid" ? "bg-green-500/8" : "bg-red-500/8";
+  const textColor = side === "bid" ? "text-green-400" : "text-red-400";
 
   return (
-    <div className="relative">
+    <div className="relative rounded-sm">
       <div
-        className={`absolute inset-y-0 ${side === "bid" ? "right-0" : "left-0"} ${bgColor}`}
+        className={`absolute inset-y-0 ${side === "bid" ? "right-0" : "left-0"} ${bgColor} rounded-sm`}
         style={{ width: `${pct}%` }}
       />
-      <div className="relative grid grid-cols-3 gap-1 text-xs py-0.5">
+      <div className="relative grid grid-cols-3 gap-1 text-xs py-1 px-1">
         {side === "bid" ? (
           <>
             <span className="text-muted-foreground">{entry.orderCount}</span>
             <span className="text-right">{entry.quantity}</span>
-            <span className={`text-right font-medium ${textColor}`}>
+            <span className={`text-right font-medium font-[family-name:var(--font-mono)] ${textColor}`}>
               {formatPrice(entry.price)}
             </span>
           </>
         ) : (
           <>
-            <span className={`font-medium ${textColor}`}>
+            <span className={`font-medium font-[family-name:var(--font-mono)] ${textColor}`}>
               {formatPrice(entry.price)}
             </span>
             <span className="text-right">{entry.quantity}</span>
-            <span className="text-right text-muted-foreground">
-              {entry.orderCount}
-            </span>
+            <span className="text-right text-muted-foreground">{entry.orderCount}</span>
           </>
         )}
       </div>
