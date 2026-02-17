@@ -3,20 +3,31 @@
 import Link from "next/link";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { Button } from "@/components/ui/button";
+import { LogOut, Menu, X } from "lucide-react";
+import { useState } from "react";
 
 export function Navbar() {
   const { user, status, logout } = useAuth();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto flex h-14 items-center px-4">
-        <Link href="/" className="mr-6 flex items-center space-x-2">
-          <span className="text-xl font-bold">Cardboard</span>
+    <header className="sticky top-0 z-50 w-full border-b border-border/40 glass">
+      <div className="container mx-auto flex h-16 items-center justify-between px-4">
+        {/* Logo */}
+        <Link href="/" className="flex items-center gap-2 group">
+          <div className="h-8 w-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center transition-colors group-hover:bg-primary/15">
+            <span className="text-primary font-bold text-sm font-[family-name:var(--font-display)]">C</span>
+          </div>
+          <span className="text-lg font-bold tracking-tight font-[family-name:var(--font-display)]">
+            Cardboard
+          </span>
         </Link>
-        <nav className="flex flex-1 items-center space-x-6 text-sm font-medium">
+
+        {/* Desktop nav */}
+        <nav className="hidden md:flex items-center gap-1">
           <Link
             href="/cards"
-            className="transition-colors hover:text-foreground/80 text-foreground/60"
+            className="px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-accent/50"
           >
             Browse
           </Link>
@@ -24,41 +35,112 @@ export function Navbar() {
             <>
               <Link
                 href="/orders"
-                className="transition-colors hover:text-foreground/80 text-foreground/60"
+                className="px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-accent/50"
               >
                 Orders
               </Link>
               <Link
                 href="/portfolio"
-                className="transition-colors hover:text-foreground/80 text-foreground/60"
+                className="px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-accent/50"
               >
                 Portfolio
               </Link>
             </>
           )}
         </nav>
-        <div className="flex items-center space-x-2">
+
+        {/* Desktop auth */}
+        <div className="hidden md:flex items-center gap-3">
           {status === "loading" ? (
-            <div className="h-8 w-20 animate-pulse rounded bg-muted" />
+            <div className="h-8 w-24 animate-pulse rounded-lg bg-muted" />
           ) : user ? (
             <>
               <span className="text-sm text-muted-foreground">{user.name || user.email}</span>
-              <Button variant="ghost" size="sm" onClick={() => logout()}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => logout()}
+                className="gap-2 text-muted-foreground hover:text-foreground"
+              >
+                <LogOut className="h-3.5 w-3.5" />
                 Sign Out
               </Button>
             </>
           ) : (
             <>
-              <Button variant="ghost" size="sm" asChild>
+              <Button variant="ghost" size="sm" asChild className="text-muted-foreground hover:text-foreground">
                 <Link href="/login">Sign In</Link>
               </Button>
-              <Button size="sm" asChild>
+              <Button size="sm" asChild className="font-semibold">
                 <Link href="/register">Get Started</Link>
               </Button>
             </>
           )}
         </div>
+
+        {/* Mobile hamburger */}
+        <button
+          className="md:hidden p-2 rounded-lg hover:bg-accent/50 text-muted-foreground"
+          onClick={() => setMobileOpen(!mobileOpen)}
+        >
+          {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </button>
       </div>
+
+      {/* Mobile menu */}
+      {mobileOpen && (
+        <div className="md:hidden border-t border-border/40 glass">
+          <div className="container mx-auto px-4 py-4 space-y-1">
+            <Link
+              href="/cards"
+              className="block px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent/50"
+              onClick={() => setMobileOpen(false)}
+            >
+              Browse Cards
+            </Link>
+            {user && (
+              <>
+                <Link
+                  href="/orders"
+                  className="block px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  My Orders
+                </Link>
+                <Link
+                  href="/portfolio"
+                  className="block px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  Portfolio
+                </Link>
+              </>
+            )}
+            <div className="pt-3 border-t border-border/40">
+              {user ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => { logout(); setMobileOpen(false); }}
+                  className="w-full justify-start gap-2 text-muted-foreground"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                  Sign Out
+                </Button>
+              ) : (
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" asChild className="flex-1">
+                    <Link href="/login" onClick={() => setMobileOpen(false)}>Sign In</Link>
+                  </Button>
+                  <Button size="sm" asChild className="flex-1 font-semibold">
+                    <Link href="/register" onClick={() => setMobileOpen(false)}>Get Started</Link>
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

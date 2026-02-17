@@ -28,18 +28,27 @@ export default async function BrowseCardsPage({
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Browse Cards</h1>
-      <div className="flex flex-col md:flex-row gap-6">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold font-[family-name:var(--font-display)]">Browse Cards</h1>
+        <p className="text-muted-foreground mt-1">
+          Explore graded TCG cards across all supported games.
+        </p>
+      </div>
+      <div className="flex flex-col md:flex-row gap-8">
         <aside className="w-full md:w-64 shrink-0">
-          <Suspense>
-            <CardFilters games={games} />
-          </Suspense>
+          <div className="sticky top-24 rounded-2xl border border-border/50 bg-card/50 p-5">
+            <Suspense>
+              <CardFilters games={games} />
+            </Suspense>
+          </div>
         </aside>
         <div className="flex-1">
           {result.data.length === 0 ? (
-            <p className="text-muted-foreground">
-              No cards found matching your filters.
-            </p>
+            <div className="rounded-2xl border border-border/50 bg-card/50 p-12 text-center">
+              <p className="text-muted-foreground">
+                No cards found matching your filters.
+              </p>
+            </div>
           ) : (
             <>
               <p className="text-sm text-muted-foreground mb-4">

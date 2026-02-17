@@ -11,10 +11,10 @@ export function CardDetail({ card }: CardDetailProps) {
   const imageUrl = card.imageUrlHiRes || card.imageUrl;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
       {/* Image */}
       <div className="flex justify-center">
-        <div className="relative aspect-[2.5/3.5] w-full max-w-sm bg-muted rounded-lg overflow-hidden">
+        <div className="relative aspect-[2.5/3.5] w-full max-w-sm rounded-2xl overflow-hidden bg-secondary/30 border border-border/50">
           {imageUrl ? (
             <Image
               src={imageUrl}
@@ -38,16 +38,18 @@ export function CardDetail({ card }: CardDetailProps) {
           <p className="text-sm text-muted-foreground">
             {card.set.game.name} &middot; {card.set.name}
           </p>
-          <h1 className="text-3xl font-bold mt-1">{card.name}</h1>
+          <h1 className="text-3xl font-bold mt-1 font-[family-name:var(--font-display)]">{card.name}</h1>
           {card.number && (
-            <p className="text-muted-foreground mt-1">#{card.number}</p>
+            <p className="text-muted-foreground mt-1 font-[family-name:var(--font-mono)]">#{card.number}</p>
           )}
         </div>
 
         {/* Price */}
-        <div>
+        <div className="rounded-xl border border-border/50 bg-card/50 p-4">
           <p className="text-sm text-muted-foreground">Market Price</p>
-          <p className="text-3xl font-bold">{formatPrice(card.marketPrice)}</p>
+          <p className="text-3xl font-bold text-gradient font-[family-name:var(--font-display)]">
+            {formatPrice(card.marketPrice)}
+          </p>
           {card.lastPriceSync && (
             <p className="text-xs text-muted-foreground mt-1">
               Last updated: {new Date(card.lastPriceSync).toLocaleDateString()}
@@ -57,10 +59,14 @@ export function CardDetail({ card }: CardDetailProps) {
 
         {/* Badges */}
         <div className="flex flex-wrap gap-2">
-          {card.rarity && <Badge variant="secondary">{card.rarity}</Badge>}
-          {card.supertype && <Badge variant="outline">{card.supertype}</Badge>}
+          {card.rarity && (
+            <Badge variant="secondary" className="rounded-lg">{card.rarity}</Badge>
+          )}
+          {card.supertype && (
+            <Badge variant="outline" className="rounded-lg">{card.supertype}</Badge>
+          )}
           {card.subtypes?.map((subtype) => (
-            <Badge key={subtype} variant="outline">
+            <Badge key={subtype} variant="outline" className="rounded-lg">
               {subtype}
             </Badge>
           ))}
@@ -69,17 +75,18 @@ export function CardDetail({ card }: CardDetailProps) {
         {/* Price History */}
         {card.priceHistory.length > 0 && (
           <div>
-            <h2 className="text-lg font-semibold mb-3">Recent Price History</h2>
-            <div className="space-y-1">
+            <h2 className="text-lg font-semibold mb-3 font-[family-name:var(--font-display)]">
+              Recent Price History
+            </h2>
+            <div className="rounded-xl border border-border/50 bg-card/50 divide-y divide-border/30">
               {card.priceHistory.slice(0, 10).map((entry, i) => (
-                <div
-                  key={i}
-                  className="flex justify-between text-sm py-1 border-b last:border-0"
-                >
+                <div key={i} className="flex justify-between text-sm px-4 py-2.5">
                   <span className="text-muted-foreground">
                     {new Date(entry.timestamp).toLocaleDateString()}
                   </span>
-                  <span className="font-medium">{formatPrice(entry.price)}</span>
+                  <span className="font-medium font-[family-name:var(--font-mono)]">
+                    {formatPrice(entry.price)}
+                  </span>
                 </div>
               ))}
             </div>

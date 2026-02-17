@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 
 interface VerificationItem {
   id: string;
@@ -76,67 +77,88 @@ export default function VerificationPage() {
   if (loading) {
     return (
       <div>
-        <h1 className="text-3xl font-bold mb-6">Card Verification Queue</h1>
-        <p className="text-muted-foreground">Loading...</p>
+        <h1 className="text-3xl font-bold mb-6 font-[family-name:var(--font-display)]">Card Verification Queue</h1>
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Loading...
+        </div>
       </div>
     );
   }
 
   return (
     <div>
-      <h1 className="text-3xl font-bold mb-6">Card Verification Queue</h1>
+      <h1 className="text-3xl font-bold mb-6 font-[family-name:var(--font-display)]">Card Verification Queue</h1>
 
       {items.length === 0 ? (
-        <p className="text-muted-foreground">No cards pending verification.</p>
+        <div className="rounded-2xl border border-border/50 bg-card/50 p-12 text-center">
+          <p className="text-muted-foreground">No cards pending verification.</p>
+        </div>
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Card</TableHead>
-              <TableHead>Set</TableHead>
-              <TableHead>Cert #</TableHead>
-              <TableHead>Grade</TableHead>
-              <TableHead>Grading</TableHead>
-              <TableHead>Seller</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {items.map((item) => (
-              <TableRow key={item.id}>
-                <TableCell className="font-medium">{item.card.name}</TableCell>
-                <TableCell>
-                  <span className="text-muted-foreground text-sm">
-                    {item.card.set.game.name} &gt; {item.card.set.name}
-                  </span>
-                </TableCell>
-                <TableCell className="font-mono">{item.certNumber}</TableCell>
-                <TableCell>{item.grade}</TableCell>
-                <TableCell>
-                  <Badge variant="outline">{item.gradingCompany}</Badge>
-                </TableCell>
-                <TableCell>{item.owner.name ?? item.owner.email}</TableCell>
-                <TableCell className="space-x-2">
-                  <Button
-                    size="sm"
-                    onClick={() => handleVerify(item.id, true)}
-                    disabled={actionLoading === item.id}
-                  >
-                    Approve
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => handleVerify(item.id, false)}
-                    disabled={actionLoading === item.id}
-                  >
-                    Reject
-                  </Button>
-                </TableCell>
+        <div className="rounded-2xl border border-border/50 bg-card/50 overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-border/40 hover:bg-transparent">
+                <TableHead>Card</TableHead>
+                <TableHead>Set</TableHead>
+                <TableHead>Cert #</TableHead>
+                <TableHead>Grade</TableHead>
+                <TableHead>Grading</TableHead>
+                <TableHead>Seller</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {items.map((item) => (
+                <TableRow key={item.id} className="border-border/30 hover:bg-accent/30">
+                  <TableCell className="font-medium">{item.card.name}</TableCell>
+                  <TableCell>
+                    <span className="text-muted-foreground text-sm">
+                      {item.card.set.game.name} &gt; {item.card.set.name}
+                    </span>
+                  </TableCell>
+                  <TableCell className="font-[family-name:var(--font-mono)] text-sm">
+                    {item.certNumber}
+                  </TableCell>
+                  <TableCell className="font-semibold">{item.grade}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="text-xs">{item.gradingCompany}</Badge>
+                  </TableCell>
+                  <TableCell className="text-sm">{item.owner.name ?? item.owner.email}</TableCell>
+                  <TableCell>
+                    <div className="flex gap-1.5">
+                      <Button
+                        size="sm"
+                        className="h-7 text-xs rounded-lg gap-1"
+                        onClick={() => handleVerify(item.id, true)}
+                        disabled={actionLoading === item.id}
+                      >
+                        {actionLoading === item.id ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <>
+                            <CheckCircle2 className="h-3 w-3" />
+                            Approve
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="h-7 text-xs rounded-lg gap-1"
+                        onClick={() => handleVerify(item.id, false)}
+                        disabled={actionLoading === item.id}
+                      >
+                        <XCircle className="h-3 w-3" />
+                        Reject
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       )}
     </div>
   );

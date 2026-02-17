@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Loader2 } from "lucide-react";
 
 interface DisputeItem {
   id: string;
@@ -58,10 +59,7 @@ export default function DisputesPage() {
     fetchDisputes();
   }, [fetchDisputes]);
 
-  async function handleResolve(
-    disputeId: string,
-    resolution: string,
-  ) {
+  async function handleResolve(disputeId: string, resolution: string) {
     const token = getAccessToken();
     if (!token) return;
     setResolving(disputeId);
@@ -88,75 +86,84 @@ export default function DisputesPage() {
   if (loading) {
     return (
       <div>
-        <h1 className="text-3xl font-bold mb-6">Dispute Resolution</h1>
-        <p className="text-muted-foreground">Loading...</p>
+        <h1 className="text-3xl font-bold mb-6 font-[family-name:var(--font-display)]">Dispute Resolution</h1>
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Loading...
+        </div>
       </div>
     );
   }
 
   return (
     <div>
-      <h1 className="text-3xl font-bold mb-6">Dispute Resolution</h1>
+      <h1 className="text-3xl font-bold mb-6 font-[family-name:var(--font-display)]">Dispute Resolution</h1>
 
       {disputes.length === 0 ? (
-        <p className="text-muted-foreground">No disputes found.</p>
+        <div className="rounded-2xl border border-border/50 bg-card/50 p-12 text-center">
+          <p className="text-muted-foreground">No disputes found.</p>
+        </div>
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Status</TableHead>
-              <TableHead>Reason</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead>Trade</TableHead>
-              <TableHead>Filed By</TableHead>
-              <TableHead>Filed</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {disputes.map((d) => (
-              <TableRow key={d.id}>
-                <TableCell>
-                  <Badge variant={STATUS_COLORS[d.status] ?? "outline"}>
-                    {d.status}
-                  </Badge>
-                </TableCell>
-                <TableCell>{d.reason}</TableCell>
-                <TableCell className="max-w-[200px] truncate">
-                  {d.description}
-                </TableCell>
-                <TableCell className="font-mono text-sm">
-                  ${(d.trade.price / 100).toFixed(2)} x{d.trade.quantity}
-                </TableCell>
-                <TableCell>{d.user.name ?? d.user.email}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  {new Date(d.createdAt).toLocaleDateString()}
-                </TableCell>
-                <TableCell>
-                  {(d.status === "OPEN" || d.status === "UNDER_REVIEW") && (
-                    <div className="flex gap-1">
-                      <Button
-                        size="sm"
-                        onClick={() => handleResolve(d.id, "RESOLVED_REFUND")}
-                        disabled={resolving === d.id}
-                      >
-                        Refund
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleResolve(d.id, "RESOLVED_REJECTED")}
-                        disabled={resolving === d.id}
-                      >
-                        Reject
-                      </Button>
-                    </div>
-                  )}
-                </TableCell>
+        <div className="rounded-2xl border border-border/50 bg-card/50 overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-border/40 hover:bg-transparent">
+                <TableHead>Status</TableHead>
+                <TableHead>Reason</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead>Trade</TableHead>
+                <TableHead>Filed By</TableHead>
+                <TableHead>Filed</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {disputes.map((d) => (
+                <TableRow key={d.id} className="border-border/30 hover:bg-accent/30">
+                  <TableCell>
+                    <Badge variant={STATUS_COLORS[d.status] ?? "outline"} className="text-xs">
+                      {d.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-sm">{d.reason}</TableCell>
+                  <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
+                    {d.description}
+                  </TableCell>
+                  <TableCell className="font-[family-name:var(--font-mono)] text-sm">
+                    ${(d.trade.price / 100).toFixed(2)} x{d.trade.quantity}
+                  </TableCell>
+                  <TableCell className="text-sm">{d.user.name ?? d.user.email}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {new Date(d.createdAt).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell>
+                    {(d.status === "OPEN" || d.status === "UNDER_REVIEW") && (
+                      <div className="flex gap-1.5">
+                        <Button
+                          size="sm"
+                          className="h-7 text-xs rounded-lg"
+                          onClick={() => handleResolve(d.id, "RESOLVED_REFUND")}
+                          disabled={resolving === d.id}
+                        >
+                          {resolving === d.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Refund"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs rounded-lg"
+                          onClick={() => handleResolve(d.id, "RESOLVED_REJECTED")}
+                          disabled={resolving === d.id}
+                        >
+                          Reject
+                        </Button>
+                      </div>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       )}
     </div>
   );

@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Loader2 } from "lucide-react";
 
 interface ShipmentItem {
   id: string;
@@ -103,8 +104,11 @@ export default function ShipmentsPage() {
   if (loading) {
     return (
       <div>
-        <h1 className="text-3xl font-bold mb-6">Shipment Management</h1>
-        <p className="text-muted-foreground">Loading...</p>
+        <h1 className="text-3xl font-bold mb-6 font-[family-name:var(--font-display)]">Shipment Management</h1>
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Loading...
+        </div>
       </div>
     );
   }
@@ -112,95 +116,86 @@ export default function ShipmentsPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold">Shipment Management</h1>
+        <h1 className="text-3xl font-bold font-[family-name:var(--font-display)]">Shipment Management</h1>
         <div className="flex gap-2">
-          <Button
-            variant={filter === "all" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setFilter("all")}
-          >
-            All
-          </Button>
-          <Button
-            variant={filter === "INBOUND" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setFilter("INBOUND")}
-          >
-            Inbound
-          </Button>
-          <Button
-            variant={filter === "OUTBOUND" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setFilter("OUTBOUND")}
-          >
-            Outbound
-          </Button>
+          {["all", "INBOUND", "OUTBOUND"].map((f) => (
+            <Button
+              key={f}
+              variant={filter === f ? "default" : "outline"}
+              size="sm"
+              className="rounded-lg"
+              onClick={() => setFilter(f)}
+            >
+              {f === "all" ? "All" : f.charAt(0) + f.slice(1).toLowerCase()}
+            </Button>
+          ))}
         </div>
       </div>
 
       {shipments.length === 0 ? (
-        <p className="text-muted-foreground">No shipments found.</p>
+        <div className="rounded-2xl border border-border/50 bg-card/50 p-12 text-center">
+          <p className="text-muted-foreground">No shipments found.</p>
+        </div>
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Direction</TableHead>
-              <TableHead>Card</TableHead>
-              <TableHead>Cert #</TableHead>
-              <TableHead>Tracking</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>User</TableHead>
-              <TableHead>Update Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {shipments.map((s) => (
-              <TableRow key={s.id}>
-                <TableCell>
-                  <Badge variant={s.direction === "INBOUND" ? "secondary" : "default"}>
-                    {s.direction}
-                  </Badge>
-                </TableCell>
-                <TableCell className="font-medium">
-                  {s.cardInstance.card.name}
-                </TableCell>
-                <TableCell className="font-mono">{s.cardInstance.certNumber}</TableCell>
-                <TableCell>
-                  {s.trackingNumber ? (
-                    <span className="font-mono text-sm">
-                      {s.trackingNumber} ({s.carrier})
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground">-</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <Badge variant={STATUS_COLORS[s.status] ?? "outline"}>
-                    {s.status}
-                  </Badge>
-                </TableCell>
-                <TableCell>{s.user.name ?? s.user.email}</TableCell>
-                <TableCell>
-                  <Select
-                    value={s.status}
-                    onValueChange={(val) => updateStatus(s.id, val)}
-                  >
-                    <SelectTrigger className="w-[150px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {STATUS_OPTIONS.map((opt) => (
-                        <SelectItem key={opt} value={opt}>
-                          {opt}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </TableCell>
+        <div className="rounded-2xl border border-border/50 bg-card/50 overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-border/40 hover:bg-transparent">
+                <TableHead>Direction</TableHead>
+                <TableHead>Card</TableHead>
+                <TableHead>Cert #</TableHead>
+                <TableHead>Tracking</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>User</TableHead>
+                <TableHead>Update Status</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {shipments.map((s) => (
+                <TableRow key={s.id} className="border-border/30 hover:bg-accent/30">
+                  <TableCell>
+                    <Badge variant={s.direction === "INBOUND" ? "secondary" : "default"} className="text-xs">
+                      {s.direction}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="font-medium">{s.cardInstance.card.name}</TableCell>
+                  <TableCell className="font-[family-name:var(--font-mono)] text-sm">
+                    {s.cardInstance.certNumber}
+                  </TableCell>
+                  <TableCell>
+                    {s.trackingNumber ? (
+                      <span className="font-[family-name:var(--font-mono)] text-sm">
+                        {s.trackingNumber} ({s.carrier})
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={STATUS_COLORS[s.status] ?? "outline"} className="text-xs">
+                      {s.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-sm">{s.user.name ?? s.user.email}</TableCell>
+                  <TableCell>
+                    <Select value={s.status} onValueChange={(val) => updateStatus(s.id, val)}>
+                      <SelectTrigger className="w-[150px] h-8 rounded-lg bg-secondary/50 border-border/60">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {STATUS_OPTIONS.map((opt) => (
+                          <SelectItem key={opt} value={opt}>
+                            {opt}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       )}
     </div>
   );

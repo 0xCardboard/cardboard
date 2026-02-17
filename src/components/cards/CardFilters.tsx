@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Search, X } from "lucide-react";
 import type { GameWithSetCount, SetWithCardCount } from "@/types/card";
 
 interface CardFiltersProps {
@@ -36,7 +37,6 @@ export function CardFilters({ games }: CardFiltersProps) {
     prevGameIdRef.current = currentGameId;
 
     if (!currentGameId) {
-      // Derive empty sets without calling setState synchronously
       const timer = setTimeout(() => setSets([]), 0);
       return () => clearTimeout(timer);
     }
@@ -64,7 +64,6 @@ export function CardFilters({ games }: CardFiltersProps) {
       } else {
         params.delete(key);
       }
-      // Reset to page 1 when filters change
       params.delete("page");
       router.push(`/cards?${params.toString()}`);
     },
@@ -90,23 +89,31 @@ export function CardFilters({ games }: CardFiltersProps) {
   const hasFilters = currentGameId || currentSetId || nameInput || currentSortBy;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      <h3 className="text-sm font-semibold font-[family-name:var(--font-display)] text-muted-foreground uppercase tracking-wider">
+        Filters
+      </h3>
+
       <div>
-        <label className="text-sm font-medium mb-1.5 block">Search</label>
-        <Input
-          placeholder="Card name..."
-          value={nameInput}
-          onChange={(e) => handleNameChange(e.target.value)}
-        />
+        <label className="text-xs font-medium mb-1.5 block text-muted-foreground">Search</label>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            placeholder="Card name..."
+            value={nameInput}
+            onChange={(e) => handleNameChange(e.target.value)}
+            className="pl-9 h-9 rounded-xl bg-secondary/50 border-border/60 focus:border-primary/50"
+          />
+        </div>
       </div>
 
       <div>
-        <label className="text-sm font-medium mb-1.5 block">Game</label>
+        <label className="text-xs font-medium mb-1.5 block text-muted-foreground">Game</label>
         <Select value={currentGameId} onValueChange={(v) => {
-          updateFilter("setId", ""); // clear set when game changes
+          updateFilter("setId", "");
           updateFilter("gameId", v);
         }}>
-          <SelectTrigger>
+          <SelectTrigger className="rounded-xl bg-secondary/50 border-border/60">
             <SelectValue placeholder="All games" />
           </SelectTrigger>
           <SelectContent>
@@ -121,9 +128,9 @@ export function CardFilters({ games }: CardFiltersProps) {
 
       {sets.length > 0 && (
         <div>
-          <label className="text-sm font-medium mb-1.5 block">Set</label>
+          <label className="text-xs font-medium mb-1.5 block text-muted-foreground">Set</label>
           <Select value={currentSetId} onValueChange={(v) => updateFilter("setId", v)}>
-            <SelectTrigger>
+            <SelectTrigger className="rounded-xl bg-secondary/50 border-border/60">
               <SelectValue placeholder="All sets" />
             </SelectTrigger>
             <SelectContent>
@@ -138,9 +145,9 @@ export function CardFilters({ games }: CardFiltersProps) {
       )}
 
       <div>
-        <label className="text-sm font-medium mb-1.5 block">Sort by</label>
+        <label className="text-xs font-medium mb-1.5 block text-muted-foreground">Sort by</label>
         <Select value={currentSortBy} onValueChange={(v) => updateFilter("sortBy", v)}>
-          <SelectTrigger>
+          <SelectTrigger className="rounded-xl bg-secondary/50 border-border/60">
             <SelectValue placeholder="Default" />
           </SelectTrigger>
           <SelectContent>
@@ -153,7 +160,13 @@ export function CardFilters({ games }: CardFiltersProps) {
       </div>
 
       {hasFilters && (
-        <Button variant="ghost" size="sm" className="w-full" onClick={clearFilters}>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full rounded-xl text-muted-foreground hover:text-foreground gap-1.5"
+          onClick={clearFilters}
+        >
+          <X className="h-3.5 w-3.5" />
           Clear filters
         </Button>
       )}
