@@ -23,12 +23,14 @@ export function CardFilters({ games }: CardFiltersProps) {
   const searchParams = useSearchParams();
 
   const [sets, setSets] = useState<SetWithCardCount[]>([]);
+  const [rarities, setRarities] = useState<string[]>([]);
   const [nameInput, setNameInput] = useState(searchParams.get("name") || "");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevGameIdRef = useRef<string>("");
 
   const currentGameId = searchParams.get("gameId") || "";
   const currentSetId = searchParams.get("setId") || "";
+  const currentRarity = searchParams.get("rarity") || "";
   const currentSortBy = searchParams.get("sortBy") || "";
 
   // Fetch sets when game changes
@@ -55,6 +57,27 @@ export function CardFilters({ games }: CardFiltersProps) {
       cancelled = true;
     };
   }, [currentGameId]);
+
+  // Fetch rarities when game/set changes
+  useEffect(() => {
+    let cancelled = false;
+    const params = new URLSearchParams();
+    if (currentSetId) params.set("setId", currentSetId);
+    else if (currentGameId) params.set("gameId", currentGameId);
+
+    fetch(`/api/cards/rarities?${params}`)
+      .then((res) => res.json())
+      .then((json) => {
+        if (!cancelled) setRarities(json.data || []);
+      })
+      .catch(() => {
+        if (!cancelled) setRarities([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentGameId, currentSetId]);
 
   const updateFilter = useCallback(
     (key: string, value: string) => {
@@ -86,7 +109,7 @@ export function CardFilters({ games }: CardFiltersProps) {
     router.push("/cards");
   }, [router]);
 
-  const hasFilters = currentGameId || currentSetId || nameInput || currentSortBy;
+  const hasFilters = currentGameId || currentSetId || currentRarity || nameInput || currentSortBy;
 
   return (
     <div className="space-y-5">
@@ -137,6 +160,25 @@ export function CardFilters({ games }: CardFiltersProps) {
               {sets.map((set) => (
                 <SelectItem key={set.id} value={set.id}>
                   {set.name} ({set._count.cards})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {rarities.length > 0 && (
+        <div>
+          <label className="text-xs font-medium mb-1.5 block text-muted-foreground">Rarity</label>
+          <Select value={currentRarity} onValueChange={(v) => updateFilter("rarity", v === "__all__" ? "" : v)}>
+            <SelectTrigger className="rounded-xl bg-secondary/50 border-border/60">
+              <SelectValue placeholder="All rarities" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">All rarities</SelectItem>
+              {rarities.map((rarity) => (
+                <SelectItem key={rarity} value={rarity}>
+                  {rarity}
                 </SelectItem>
               ))}
             </SelectContent>
