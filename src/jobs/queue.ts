@@ -6,6 +6,7 @@ export const QUEUE_NAMES = {
   LOAN_MONITOR: "loan-monitor",
   PAYMENT_PROCESSING: "payment-processing",
   SHIP_DEADLINE: "ship-deadline",
+  WASH_TRADE_DETECTION: "wash-trade-detection",
 } as const;
 
 function getRedisConnection() {
@@ -34,5 +35,9 @@ export const paymentProcessingQueue = new Queue(QUEUE_NAMES.PAYMENT_PROCESSING, 
 });
 
 export const shipDeadlineQueue = new Queue(QUEUE_NAMES.SHIP_DEADLINE, {
+  connection: getRedisConnection(),
+});
+
+export const washTradeDetectionQueue = new Queue(QUEUE_NAMES.WASH_TRADE_DETECTION, {
   connection: getRedisConnection(),
 });

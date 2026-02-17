@@ -6,6 +6,7 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { LogOut, Menu, User, X } from "lucide-react";
 import { useState } from "react";
+import { NotificationBell } from "./NotificationBell";
 
 export function Navbar() {
   const { user, status, logout } = useAuth();
@@ -57,6 +58,7 @@ export function Navbar() {
             <div className="h-8 w-24 animate-pulse rounded-lg bg-muted" />
           ) : user ? (
             <>
+              <NotificationBell />
               <button
                 onClick={() => router.push(`/profile/${user.id}`)}
                 className="relative z-[60] flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-accent/50 cursor-pointer"

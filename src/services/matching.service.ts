@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/db";
 import { processTradePayment } from "@/services/escrow.service";
 import { createNotification } from "@/services/notification.service";
+import { washTradeDetectionQueue } from "@/jobs/queue";
+import { publish } from "@/lib/websocket";
 
 const PLATFORM_FEE_RATE = parseFloat(process.env.PLATFORM_FEE_RATE || "0.05");
 
@@ -119,6 +121,30 @@ export async function matchOrder(orderId: string): Promise<MatchResult> {
       processTradePayment(tradeId).catch(() => {
         // Payment processing is handled async — failure enqueues retry via BullMQ
       });
+
+      // Enqueue wash trade detection
+      washTradeDetectionQueue
+        .add("check-wash-trade", { tradeId })
+        .catch(() => {});
+
+      // Publish real-time updates via WebSocket
+      const cardId = order.orderBook.cardId;
+      try {
+        publish(`trades:${cardId}`, {
+          tradeId,
+          price: tradePrice,
+          quantity: fillQty,
+          timestamp: new Date().toISOString(),
+        });
+        publish(`orderbook:${cardId}`, {
+          event: "trade",
+          tradeId,
+          price: tradePrice,
+          quantity: fillQty,
+        });
+      } catch {
+        // WebSocket server may not be running
+      }
     }
 
     tradesCreated++;
@@ -153,6 +179,18 @@ export async function matchOrder(orderId: string): Promise<MatchResult> {
         `Your market ${order.side} order was cancelled — no matching orders available.`,
         { orderId: order.id },
       );
+    }
+  }
+
+  // Publish order book update for any order changes
+  if (tradesCreated > 0 || cancelledRemainder > 0) {
+    try {
+      publish(`orderbook:${order.orderBook.cardId}`, {
+        event: "update",
+        orderId: order.id,
+      });
+    } catch {
+      // WebSocket server may not be running
     }
   }
 
