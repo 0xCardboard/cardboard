@@ -249,6 +249,15 @@ export async function payoutToSeller(tradeId: string): Promise<void> {
     throw new AppError("VALIDATION_ERROR", `Cannot payout: escrow is ${trade.escrowStatus}`);
   }
 
+  if (process.env.NODE_ENV === "development") {
+    // Dev bypass: skip Stripe transfer and mark escrow as released
+    await prisma.trade.update({
+      where: { id: tradeId },
+      data: { escrowStatus: "RELEASED" },
+    });
+    return;
+  }
+
   const seller = await prisma.user.findUnique({ where: { id: trade.sellerId } });
   if (!seller?.stripeAccountId) {
     throw new AppError("VALIDATION_ERROR", "Seller has no Stripe Connect account");
@@ -291,11 +300,21 @@ export async function refundBuyer(
   const trade = await prisma.trade.findUnique({ where: { id: tradeId } });
 
   if (!trade) throw new AppError("NOT_FOUND", "Trade not found");
-  if (!trade.stripePaymentId) {
-    throw new AppError("VALIDATION_ERROR", "Trade has no payment to refund");
-  }
   if (trade.escrowStatus !== "CAPTURED" && trade.escrowStatus !== "RELEASED") {
     throw new AppError("VALIDATION_ERROR", `Cannot refund: escrow is ${trade.escrowStatus}`);
+  }
+
+  if (process.env.NODE_ENV === "development") {
+    // Dev bypass: skip Stripe refund and mark escrow as refunded
+    await prisma.trade.update({
+      where: { id: tradeId },
+      data: { escrowStatus: "REFUNDED" },
+    });
+    return;
+  }
+
+  if (!trade.stripePaymentId) {
+    throw new AppError("VALIDATION_ERROR", "Trade has no payment to refund");
   }
 
   const refundParams: { payment_intent: string; reason: "requested_by_customer"; metadata: Record<string, string>; amount?: number } = {

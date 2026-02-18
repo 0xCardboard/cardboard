@@ -152,6 +152,7 @@ model User {
   loansAsLender    Loan[]          @relation("Lender")
   loanOffers       LoanOffer[]
   verifiedCards    CardInstance[]  @relation("VerifiedBy")
+  claimedCards     CardInstance[]  @relation("ClaimedBy")
   refreshTokens    RefreshToken[]
   notifications    Notification[]
   paymentMethods   PaymentMethod[]
@@ -276,9 +277,19 @@ model CardInstance {
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
 
+  // Admin claiming (Phase D.1)
+  claimedById       String?
+  claimedAt         DateTime?
+
+  // Verification details (Phase D.2)
+  verificationNotes String?
+  psaScanUrl        String?
+  certLookupData    Json?
+
   card       Card      @relation(fields: [cardId], references: [id], onDelete: Cascade)
   owner      User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   verifiedBy User?     @relation("VerifiedBy", fields: [verifiedById], references: [id])
+  claimedBy  User?     @relation("ClaimedBy", fields: [claimedById], references: [id])
   orders     Order[]
   shipments  Shipment[]
   loan       Loan?
