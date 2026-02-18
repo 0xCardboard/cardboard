@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { withAuth, type AuthenticatedRequest } from "@/lib/auth-middleware";
+import { withAuth, withVerifiedEmail, type AuthenticatedRequest } from "@/lib/auth-middleware";
 import { registerCardInstance, getUserCardInstances } from "@/services/card-instance.service";
 import { AppError, errorResponse } from "@/lib/errors";
 
@@ -22,7 +22,7 @@ export const GET = withAuth(async (req: AuthenticatedRequest) => {
   }
 });
 
-export const POST = withAuth(async (req: AuthenticatedRequest) => {
+export const POST = withVerifiedEmail(async (req: AuthenticatedRequest) => {
   try {
     const body = await req.json();
     const { cardId, gradingCompany, certNumber, grade } = body;

@@ -71,6 +71,24 @@ function getEmailProvider(): EmailProvider {
 const provider = getEmailProvider();
 
 /**
+ * Send a transactional email directly (e.g., password reset, email verification).
+ * Bypasses notification preference checks.
+ */
+export async function sendTransactionalEmail(
+  to: string,
+  subject: string,
+  body: string,
+): Promise<boolean> {
+  try {
+    await provider.sendEmail(to, subject, body);
+    return true;
+  } catch (error) {
+    console.error(`[email] Failed to send transactional email to ${to}:`, error);
+    return false;
+  }
+}
+
+/**
  * Map notification types to UserSettings preference fields.
  */
 const NOTIFICATION_PREFERENCE_MAP: Partial<

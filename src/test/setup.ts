@@ -29,6 +29,12 @@ vi.mock("@/lib/stripe", () => ({
   },
 }));
 
+// Mock email service
+vi.mock("@/services/email.service", () => ({
+  sendNotificationEmail: vi.fn().mockResolvedValue(true),
+  sendTransactionalEmail: vi.fn().mockResolvedValue(true),
+}));
+
 // Mock BullMQ queues
 vi.mock("@/jobs/queue", () => ({
   QUEUE_NAMES: {

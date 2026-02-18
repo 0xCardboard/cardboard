@@ -127,6 +127,16 @@ model User {
   stripeAccountId  String?
   stripeCustomerId String?
   role             UserRole @default(USER)
+
+  // Password reset (Phase B.1)
+  passwordResetToken    String?
+  passwordResetExpires  DateTime?
+
+  // Email verification (Phase B.2)
+  emailVerified             Boolean   @default(false)
+  emailVerificationToken    String?
+  emailVerificationExpires  DateTime?
+
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 

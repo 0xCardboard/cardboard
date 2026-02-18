@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { withAuth, type AuthenticatedRequest } from "@/lib/auth-middleware";
+import { withAuth, withVerifiedEmail, type AuthenticatedRequest } from "@/lib/auth-middleware";
 import { errorResponse } from "@/lib/errors";
 import { createInboundShipment } from "@/services/shipment.service";
 import { AppError } from "@/lib/errors";
@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export const POST = withRateLimit(
   RATE_LIMITS.SHIPMENTS,
   "shipments:inbound",
-  withAuth(async (req: AuthenticatedRequest) => {
+  withVerifiedEmail(async (req: AuthenticatedRequest) => {
     try {
       const body = await req.json();
       const { tradeId, cardInstanceId, trackingNumber, carrier } = body;
