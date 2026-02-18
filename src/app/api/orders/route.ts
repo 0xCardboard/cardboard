@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { withAuth, type AuthenticatedRequest } from "@/lib/auth-middleware";
+import { withAuth, withVerifiedEmail, type AuthenticatedRequest } from "@/lib/auth-middleware";
 import { placeOrder, getUserOrders } from "@/services/order.service";
 import { AppError, errorResponse } from "@/lib/errors";
 import { withRateLimit } from "@/lib/rate-limit-middleware";
@@ -28,7 +28,7 @@ export const GET = withAuth(async (req: AuthenticatedRequest) => {
 export const POST = withRateLimit(
   RATE_LIMITS.ORDERS,
   "orders:place",
-  withAuth(async (req: AuthenticatedRequest) => {
+  withVerifiedEmail(async (req: AuthenticatedRequest) => {
     try {
       const body = await req.json();
       const { cardId, side, type, price, quantity, cardInstanceId, certNumber, gradingCompany, grade, minGrade, idempotencyKey } = body;

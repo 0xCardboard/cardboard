@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { withAuth, type AuthenticatedRequest } from "@/lib/auth-middleware";
+import { withAuth, withVerifiedEmail, type AuthenticatedRequest } from "@/lib/auth-middleware";
 import { errorResponse } from "@/lib/errors";
 import { openDispute, getUserDisputes } from "@/services/dispute.service";
 import { AppError } from "@/lib/errors";
@@ -29,7 +29,7 @@ export const GET = withAuth(async (req: AuthenticatedRequest) => {
 export const POST = withRateLimit(
   RATE_LIMITS.DISPUTES,
   "disputes:open",
-  withAuth(async (req: AuthenticatedRequest) => {
+  withVerifiedEmail(async (req: AuthenticatedRequest) => {
     try {
       const body = await req.json();
       const { tradeId, reason, description, evidence } = body;

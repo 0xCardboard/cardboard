@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import { EmailVerificationBanner } from "@/components/layout/EmailVerificationBanner";
 import { SessionProvider } from "@/components/providers/SessionProvider";
 import "./globals.css";
 
@@ -28,6 +29,7 @@ export default function RootLayout({
         <SessionProvider>
           <div className="relative flex min-h-screen flex-col noise">
             <Navbar />
+            <EmailVerificationBanner />
             <main className="relative z-10 flex-1">{children}</main>
             <Footer />
           </div>
