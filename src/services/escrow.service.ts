@@ -32,7 +32,15 @@ function businessDayDelayMs(days: number): number {
  */
 export async function processTradePayment(tradeId: string): Promise<void> {
   try {
-    await chargeForTrade(tradeId);
+    if (process.env.NODE_ENV === "development") {
+      // Dev bypass: skip Stripe charge and mark trade as captured
+      await prisma.trade.update({
+        where: { id: tradeId },
+        data: { escrowStatus: "CAPTURED" },
+      });
+    } else {
+      await chargeForTrade(tradeId);
+    }
 
     const trade = await prisma.trade.findUnique({ where: { id: tradeId } });
     if (trade) {
