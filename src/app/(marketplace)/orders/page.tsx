@@ -216,7 +216,8 @@ export default function OrdersPage() {
       order.side === "SELL" &&
       order.status === "FILLED" &&
       order.trade !== null &&
-      order.trade.escrowStatus === "PENDING"
+      (order.trade.escrowStatus === "PENDING" ||
+        order.trade.escrowStatus === "CAPTURED")
     );
   }
 

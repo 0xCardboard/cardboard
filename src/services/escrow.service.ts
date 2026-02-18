@@ -32,7 +32,15 @@ function businessDayDelayMs(days: number): number {
  */
 export async function processTradePayment(tradeId: string): Promise<void> {
   try {
-    await chargeForTrade(tradeId);
+    if (process.env.NODE_ENV === "development") {
+      // Dev bypass: skip Stripe charge and mark trade as captured
+      await prisma.trade.update({
+        where: { id: tradeId },
+        data: { escrowStatus: "CAPTURED" },
+      });
+    } else {
+      await chargeForTrade(tradeId);
+    }
 
     const trade = await prisma.trade.findUnique({ where: { id: tradeId } });
     if (trade) {
@@ -46,9 +54,9 @@ export async function processTradePayment(tradeId: string): Promise<void> {
       await createNotification(
         trade.sellerId,
         "TRADE_FILLED",
-        "Order Filled",
-        `Your sell order was filled at $${(trade.price / 100).toFixed(2)}. Ship your card within 3 business days to complete the trade.`,
-        { tradeId },
+        "Order Filled — Ship Your Card",
+        `Your sell order was filled at $${(trade.price / 100).toFixed(2)}. Ship your card within 3 business days to:\n\nCardboard Warehouse\nAttn: Card Verification\n123 Trading Card Lane, Suite 100\nAustin, TX 78701\n\nInclude your username and cert number in the package. View full packing guidelines at /shipping-instructions`,
+        { tradeId, shippingInstructionsUrl: "/shipping-instructions" },
       );
 
       // Set ship deadline and enqueue deadline check job
