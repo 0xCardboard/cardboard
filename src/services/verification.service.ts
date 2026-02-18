@@ -236,7 +236,12 @@ export async function completeVerification(
       imageUrls = [scanImages.front, scanImages.back].filter((u): u is string => !!u);
     }
 
-    // Mark as verified
+    // Determine the buyer if there's a pending trade
+    const pendingTrade = instance.orders
+      .flatMap((o) => o.sellTrades)
+      .find((t) => t.buyerId);
+
+    // Mark as verified and transfer ownership to buyer if trade exists
     await prisma.cardInstance.update({
       where: { id: cardInstanceId },
       data: {
@@ -246,6 +251,8 @@ export async function completeVerification(
         verificationNotes: notes,
         psaScanUrl,
         imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
+        // Transfer ownership to buyer when there's a pending trade
+        ...(pendingTrade ? { ownerId: pendingTrade.buyerId } : {}),
         // Clear claiming fields
         claimedById: null,
         claimedAt: null,
@@ -259,18 +266,36 @@ export async function completeVerification(
       }
     }
 
-    // Notify owner
-    const verifyMsg = hasPendingTrade
-      ? `Your ${instance.card.name} (cert: ${instance.certNumber}) has been verified! Funds are being released to your account.`
-      : `Your ${instance.card.name} (cert: ${instance.certNumber}) has been verified and added to your portfolio.`;
+    if (hasPendingTrade && pendingTrade) {
+      // Notify seller — funds released
+      await createNotification(
+        instance.ownerId,
+        "CARD_VERIFIED",
+        "Card Verified — Sale Complete",
+        `Your ${instance.card.name} (cert: ${instance.certNumber}) has been verified! Funds are being released to your account.` +
+          (notes ? ` Note: ${notes}` : ""),
+        { cardInstanceId },
+      );
 
-    await createNotification(
-      instance.ownerId,
-      "CARD_VERIFIED",
-      "Card Verified",
-      verifyMsg + (notes ? ` Note: ${notes}` : ""),
-      { cardInstanceId },
-    );
+      // Notify buyer — card added to their portfolio
+      await createNotification(
+        pendingTrade.buyerId,
+        "CARD_VERIFIED",
+        "Card Verified — Purchase Complete",
+        `The ${instance.card.name} (cert: ${instance.certNumber}) you purchased has been verified and added to your portfolio.`,
+        { cardInstanceId },
+      );
+    } else {
+      // No trade — just a vault deposit, notify owner
+      await createNotification(
+        instance.ownerId,
+        "CARD_VERIFIED",
+        "Card Verified",
+        `Your ${instance.card.name} (cert: ${instance.certNumber}) has been verified and added to your portfolio.` +
+          (notes ? ` Note: ${notes}` : ""),
+        { cardInstanceId },
+      );
+    }
   } else {
     // Rejection
     const rejectReason = input.rejectReason ?? notes ?? "Verification failed";
