@@ -221,6 +221,7 @@ model CardSet {
   cards Card[]
 
   @@index([gameId])
+  @@index([gameId, releaseDate])
 }
 
 model Card {
@@ -245,6 +246,8 @@ model Card {
 
   @@index([setId])
   @@index([name])
+  @@index([setId, rarity])
+  @@index([supertype])
 }
 
 // ─── Card Instances (IOUs) ──────────────────────────────
