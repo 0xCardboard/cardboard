@@ -30,6 +30,13 @@ export interface PlaceOrderInput {
   idempotencyKey?: string;
 }
 
+export interface OrderTradeInfo {
+  id: string;
+  escrowStatus: string;
+  shipDeadline: string | null;
+  createdAt: string;
+}
+
 export interface OrderWithDetails {
   id: string;
   side: "BUY" | "SELL";
@@ -55,6 +62,7 @@ export interface OrderWithDetails {
     grade: number;
     gradingCompany: string;
   } | null;
+  trade: OrderTradeInfo | null;
 }
 
 export interface UserOrderFilters {

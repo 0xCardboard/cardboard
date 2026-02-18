@@ -37,6 +37,12 @@ export function Navbar() {
           {user && (
             <>
               <Link
+                href="/sell"
+                className="px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-accent/50"
+              >
+                Sell
+              </Link>
+              <Link
                 href="/orders"
                 className="px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-accent/50"
               >
@@ -112,6 +118,13 @@ export function Navbar() {
             </Link>
             {user && (
               <>
+                <Link
+                  href="/sell"
+                  className="block px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  Sell a Card
+                </Link>
                 <Link
                   href="/orders"
                   className="block px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent/50"

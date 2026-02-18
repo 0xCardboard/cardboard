@@ -36,8 +36,8 @@ const ORDER_INCLUDE = {
       gradingCompany: true,
     },
   },
-  buyTrades: { select: { price: true, quantity: true } },
-  sellTrades: { select: { price: true, quantity: true } },
+  buyTrades: { select: { id: true, price: true, quantity: true, escrowStatus: true, shipDeadline: true, createdAt: true } },
+  sellTrades: { select: { id: true, price: true, quantity: true, escrowStatus: true, shipDeadline: true, createdAt: true } },
 } as const;
 
 export async function placeOrder(
@@ -455,6 +455,14 @@ function transformOrder(order: any): OrderWithDetails {
           certNumber: order.cardInstance.certNumber,
           grade: order.cardInstance.grade,
           gradingCompany: order.cardInstance.gradingCompany,
+        }
+      : null,
+    trade: trades.length > 0
+      ? {
+          id: trades[0].id,
+          escrowStatus: trades[0].escrowStatus,
+          shipDeadline: trades[0].shipDeadline?.toISOString?.() ?? trades[0].shipDeadline ?? null,
+          createdAt: trades[0].createdAt?.toISOString?.() ?? trades[0].createdAt,
         }
       : null,
   };
