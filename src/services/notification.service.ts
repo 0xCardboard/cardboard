@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
 import { AppError } from "@/lib/errors";
+import { publish } from "@/lib/websocket";
+import { sendNotificationEmail } from "@/services/email.service";
 import type { NotificationType } from "@/generated/prisma/client";
 
 interface NotificationFilters {
@@ -35,7 +37,7 @@ export async function createNotification(
   message: string,
   data?: Record<string, unknown>,
 ): Promise<void> {
-  await prisma.notification.create({
+  const notification = await prisma.notification.create({
     data: {
       userId,
       type,
@@ -44,6 +46,23 @@ export async function createNotification(
       data: data ? (data as Prisma.InputJsonValue) : Prisma.JsonNull,
     },
   });
+
+  // Push real-time notification via WebSocket
+  try {
+    publish(`notifications:${userId}`, {
+      id: notification.id,
+      type,
+      title,
+      message,
+      data,
+      createdAt: notification.createdAt,
+    });
+  } catch {
+    // WebSocket server may not be running — silently ignore
+  }
+
+  // Send transactional email (async, non-blocking)
+  sendNotificationEmail(userId, type, title, message).catch(() => {});
 }
 
 export async function getUserNotifications(

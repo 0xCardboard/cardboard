@@ -1,10 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { prisma } from "@/lib/db";
+import { washTradeDetectionQueue } from "@/jobs/queue";
 import { matchOrder } from "@/services/matching.service";
 
 describe("matching.service", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    // Re-establish mockResolvedValue after resetAllMocks clears it
+    (washTradeDetectionQueue.add as ReturnType<typeof vi.fn>).mockResolvedValue({});
   });
 
   const makeBuyOrder = (overrides = {}) => ({
@@ -34,6 +37,7 @@ describe("matching.service", () => {
     filledQuantity: 0,
     status: "OPEN",
     cardInstanceId: "inst-1",
+    orderBook: { id: "ob-1", cardId: "card-1" },
     ...overrides,
   });
 

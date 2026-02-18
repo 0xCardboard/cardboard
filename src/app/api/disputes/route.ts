@@ -3,6 +3,8 @@ import { withAuth, type AuthenticatedRequest } from "@/lib/auth-middleware";
 import { errorResponse } from "@/lib/errors";
 import { openDispute, getUserDisputes } from "@/services/dispute.service";
 import { AppError } from "@/lib/errors";
+import { withRateLimit } from "@/lib/rate-limit-middleware";
+import { RATE_LIMITS } from "@/lib/rate-limit";
 import type { DisputeStatus } from "@/generated/prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -24,29 +26,33 @@ export const GET = withAuth(async (req: AuthenticatedRequest) => {
   }
 });
 
-export const POST = withAuth(async (req: AuthenticatedRequest) => {
-  try {
-    const body = await req.json();
-    const { tradeId, reason, description, evidence } = body;
+export const POST = withRateLimit(
+  RATE_LIMITS.DISPUTES,
+  "disputes:open",
+  withAuth(async (req: AuthenticatedRequest) => {
+    try {
+      const body = await req.json();
+      const { tradeId, reason, description, evidence } = body;
 
-    if (!tradeId || !reason || !description) {
-      throw new AppError("VALIDATION_ERROR", "tradeId, reason, and description are required");
+      if (!tradeId || !reason || !description) {
+        throw new AppError("VALIDATION_ERROR", "tradeId, reason, and description are required");
+      }
+
+      if (!VALID_REASONS.includes(reason)) {
+        throw new AppError("VALIDATION_ERROR", `reason must be one of: ${VALID_REASONS.join(", ")}`);
+      }
+
+      const result = await openDispute(
+        req.user.id,
+        tradeId,
+        reason,
+        description,
+        evidence ?? [],
+      );
+
+      return NextResponse.json({ data: result }, { status: 201 });
+    } catch (error) {
+      return errorResponse(error);
     }
-
-    if (!VALID_REASONS.includes(reason)) {
-      throw new AppError("VALIDATION_ERROR", `reason must be one of: ${VALID_REASONS.join(", ")}`);
-    }
-
-    const result = await openDispute(
-      req.user.id,
-      tradeId,
-      reason,
-      description,
-      evidence ?? [],
-    );
-
-    return NextResponse.json({ data: result }, { status: 201 });
-  } catch (error) {
-    return errorResponse(error);
-  }
-});
+  }),
+);

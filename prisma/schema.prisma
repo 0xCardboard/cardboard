@@ -532,7 +532,8 @@ model UserSettings {
   notifyAnnouncements    Boolean @default(true)
 
   // Email preferences
-  emailDigest Boolean @default(true)
+  emailNotifications Boolean @default(true)
+  emailDigest        Boolean @default(true)
 
   // Display preferences
   theme    String @default("dark")
