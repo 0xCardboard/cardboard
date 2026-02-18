@@ -36,11 +36,13 @@ vi.mock("@/jobs/queue", () => ({
     ORDER_MATCHING: "order-matching",
     LOAN_MONITOR: "loan-monitor",
     PAYMENT_PROCESSING: "payment-processing",
+    WASH_TRADE_DETECTION: "wash-trade-detection",
   },
   cardSyncQueue: { add: vi.fn().mockResolvedValue({}) },
   orderMatchingQueue: { add: vi.fn().mockResolvedValue({}) },
   loanMonitorQueue: { add: vi.fn().mockResolvedValue({}) },
   paymentProcessingQueue: { add: vi.fn().mockResolvedValue({}) },
+  washTradeDetectionQueue: { add: vi.fn().mockResolvedValue({}) },
 }));
 
 function createMockModel() {
