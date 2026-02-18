@@ -89,7 +89,7 @@ describe("pokemonTcgAdapter", () => {
         name: "Pikachu",
         setId: "sv8",
         number: "25",
-        imageUrl: "https://assets.tcgdex.net/en/sv/sv8/25/low.webp",
+        imageUrl: "https://assets.tcgdex.net/en/sv/sv8/25/high.webp",
         imageUrlHiRes: "https://assets.tcgdex.net/en/sv/sv8/25/high.webp",
       });
     });

@@ -77,7 +77,7 @@ export const pokemonTcgAdapter: CardSyncAdapter = {
       name: card.name,
       setId,
       number: card.localId,
-      imageUrl: card.image ? `${card.image}/low.webp` : undefined,
+      imageUrl: card.image ? `${card.image}/high.webp` : undefined,
       imageUrlHiRes: card.image ? `${card.image}/high.webp` : undefined,
     }));
   },
