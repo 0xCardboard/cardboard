@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCardById } from "@/services/card-catalog.service";
-import { CardDetail } from "@/components/cards/CardDetail";
+import { CardDetail, CardImage, CardPriceHistory } from "@/components/cards/CardDetail";
 import { OrderBook } from "@/components/order-book/OrderBook";
 import { OrderForm } from "@/components/order-book/OrderForm";
 import { TradeHistory } from "@/components/order-book/TradeHistory";
@@ -38,18 +38,27 @@ export default async function CardDetailPage({
       </Link>
       <CardDetail card={card} />
 
-      {/* Order Book + Trading Section */}
-      <div className="mt-12 grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-8">
-          <div className="rounded-2xl border border-border/50 bg-card/50 p-6">
+      {/* Card Image + Order Book + Order Form */}
+      <div className="mt-8 grid grid-cols-1 lg:grid-cols-[280px_1fr_280px] gap-6">
+        {/* Left: Card Image + Price History */}
+        <div className="space-y-6">
+          <CardImage card={card} />
+          <CardPriceHistory card={card} />
+        </div>
+
+        {/* Middle: Order Book + Trade History */}
+        <div className="space-y-6">
+          <div className="rounded-2xl border border-border/50 bg-card/50 p-5">
             <OrderBook cardId={cardId} />
           </div>
-          <div className="rounded-2xl border border-border/50 bg-card/50 p-6">
+          <div className="rounded-2xl border border-border/50 bg-card/50 p-5">
             <TradeHistory cardId={cardId} />
           </div>
         </div>
+
+        {/* Right: Place Order */}
         <div>
-          <div className="sticky top-24 rounded-2xl border border-border/50 bg-card/50 p-6">
+          <div className="sticky top-24 rounded-2xl border border-border/50 bg-card/50 p-5">
             <OrderForm cardId={cardId} />
           </div>
         </div>
