@@ -7,7 +7,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Cardboard — P2P TCG Card Exchange",
-  description: "The peer-to-peer exchange for authenticated, graded trading cards. Trade Pokemon, One Piece, and more with real order books and 5% fees.",
+  description: "The peer-to-peer exchange for authenticated, graded Pokemon cards. Real order books, secure escrow, and just 5% fees.",
 };
 
 export default function RootLayout({

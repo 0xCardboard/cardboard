@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { Suspense, useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -37,6 +37,14 @@ interface CatalogCard {
 const STEPS = ["Find Your Card", "Card Details", "Set Your Price", "Review & Confirm"];
 
 export default function SellPage() {
+  return (
+    <Suspense fallback={<div className="container mx-auto px-4 py-16 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" /></div>}>
+      <SellPageContent />
+    </Suspense>
+  );
+}
+
+function SellPageContent() {
   const searchParams = useSearchParams();
   const { status: authStatus } = useAuth();
   const [step, setStep] = useState(0);

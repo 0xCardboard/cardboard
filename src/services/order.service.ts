@@ -423,7 +423,8 @@ export async function getOrderBook(cardId: string): Promise<OrderBookSnapshot> {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function transformOrder(order: any): OrderWithDetails {
   // Compute weighted average fill price from trades
-  const trades: { price: number; quantity: number }[] =
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const trades: any[] =
     order.side === "BUY" ? (order.buyTrades ?? []) : (order.sellTrades ?? []);
   let avgFillPrice: number | null = null;
   if (trades.length > 0) {

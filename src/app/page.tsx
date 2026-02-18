@@ -98,7 +98,7 @@ export default function Home() {
       icon: Globe,
       title: "Multi-Game Support",
       description:
-        "Trade Pokemon, One Piece, and more TCG games all in one place. We continuously add new games and sync the latest set releases.",
+        "Trade Pokemon TCG cards with full set catalog support. We sync the latest set releases automatically so new cards are available shortly after launch.",
     },
     {
       icon: TrendingUp,
@@ -132,7 +132,7 @@ export default function Home() {
     {
       question: "Which TCG games are supported?",
       answer:
-        "We currently support Pokemon TCG and One Piece Card Game, with more games being added regularly. Our data syncs automatically with official card databases, so new sets and cards appear shortly after release.",
+        "We currently support Pokemon TCG, with more games being added soon. Our data syncs automatically with the official Pokemon TCG database, so new sets and cards appear shortly after release.",
     },
     {
       question: "Can I get my physical card back?",
@@ -178,7 +178,7 @@ export default function Home() {
               The peer-to-peer exchange for authenticated, graded trading cards.
               Real order books. Secure escrow. Just 5% fees.
               <br className="hidden sm:block" />
-              Pokemon, One Piece, and more.
+              Pokemon TCG and more coming soon.
             </p>
 
             {/* CTA Buttons */}

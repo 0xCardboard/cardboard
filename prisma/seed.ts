@@ -13,12 +13,7 @@ async function main() {
     create: { id: "pokemon", name: "Pokemon TCG" },
     update: { name: "Pokemon TCG" },
   });
-  await prisma.tcgGame.upsert({
-    where: { id: "onepiece" },
-    create: { id: "onepiece", name: "One Piece TCG" },
-    update: { name: "One Piece TCG" },
-  });
-  console.log("  Games: 2");
+  console.log("  Games: 1");
 
   // --- Pokemon Sets ---
   // sv3pt5 = Pokemon 151 (cards follow National Pokedex order, so name-to-number mapping is guaranteed)
@@ -36,21 +31,7 @@ async function main() {
     });
   }
 
-  // --- One Piece Sets ---
-  const onepieceSets = [
-    { id: "OP09", name: "The Four Emperors", releaseDate: "2024-10-25", totalCards: 128 },
-    { id: "OP08", name: "Two Legends", releaseDate: "2024-08-09", totalCards: 128 },
-    { id: "OP07", name: "500 Years in the Future", releaseDate: "2024-06-28", totalCards: 128 },
-  ];
-
-  for (const set of onepieceSets) {
-    await prisma.cardSet.upsert({
-      where: { id: set.id },
-      create: { ...set, gameId: "onepiece", releaseDate: new Date(set.releaseDate), logoUrl: null },
-      update: { name: set.name, releaseDate: new Date(set.releaseDate), totalCards: set.totalCards },
-    });
-  }
-  console.log("  Sets: 5");
+  console.log("  Sets: 2");
 
   // --- Pokemon Cards ---
   // sv3pt5 (Pokemon 151): card numbers = National Pokedex numbers, so images are guaranteed correct
@@ -70,21 +51,7 @@ async function main() {
     { id: "base1-58", name: "Pikachu", setId: "base1", number: "58", rarity: "Common", supertype: "Pokemon", subtypes: ["Basic"], marketPrice: 1200, imageUrl: "https://images.pokemontcg.io/base1/58.png", imageUrlHiRes: "https://images.pokemontcg.io/base1/58_hires.png" },
   ];
 
-  // --- One Piece Cards ---
-  const onepieceCards = [
-    { id: "OP09-001", name: "Monkey D. Luffy", setId: "OP09", number: "001", rarity: "L", supertype: "Leader", subtypes: [] as string[], marketPrice: 550, imageUrl: null as string | null, imageUrlHiRes: null as string | null },
-    { id: "OP09-025", name: "Roronoa Zoro", setId: "OP09", number: "025", rarity: "SR", supertype: "Character", subtypes: [] as string[], marketPrice: 1800, imageUrl: null as string | null, imageUrlHiRes: null as string | null },
-    { id: "OP09-050", name: "Nico Robin", setId: "OP09", number: "050", rarity: "R", supertype: "Character", subtypes: [] as string[], marketPrice: 200, imageUrl: null as string | null, imageUrlHiRes: null as string | null },
-    { id: "OP09-075", name: "Trafalgar Law", setId: "OP09", number: "075", rarity: "SR", supertype: "Character", subtypes: [] as string[], marketPrice: 1500, imageUrl: null as string | null, imageUrlHiRes: null as string | null },
-    { id: "OP08-001", name: "Shanks", setId: "OP08", number: "001", rarity: "L", supertype: "Leader", subtypes: [] as string[], marketPrice: 480, imageUrl: null as string | null, imageUrlHiRes: null as string | null },
-    { id: "OP08-030", name: "Portgas D. Ace", setId: "OP08", number: "030", rarity: "SR", supertype: "Character", subtypes: [] as string[], marketPrice: 2200, imageUrl: null as string | null, imageUrlHiRes: null as string | null },
-    { id: "OP08-060", name: "Nami", setId: "OP08", number: "060", rarity: "R", supertype: "Character", subtypes: [] as string[], marketPrice: 150, imageUrl: null as string | null, imageUrlHiRes: null as string | null },
-    { id: "OP07-001", name: "Kozuki Oden", setId: "OP07", number: "001", rarity: "L", supertype: "Leader", subtypes: [] as string[], marketPrice: 350, imageUrl: null as string | null, imageUrlHiRes: null as string | null },
-    { id: "OP07-040", name: "Yamato", setId: "OP07", number: "040", rarity: "SR", supertype: "Character", subtypes: [] as string[], marketPrice: 1200, imageUrl: null as string | null, imageUrlHiRes: null as string | null },
-    { id: "OP07-080", name: "Sanji", setId: "OP07", number: "080", rarity: "R", supertype: "Character", subtypes: [] as string[], marketPrice: 180, imageUrl: null as string | null, imageUrlHiRes: null as string | null },
-  ];
-
-  const allCards = [...pokemonCards, ...onepieceCards];
+  const allCards = pokemonCards;
 
   for (const card of allCards) {
     await prisma.card.upsert({

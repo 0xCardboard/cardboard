@@ -27,7 +27,6 @@ describe("card-catalog.service", () => {
     it("should return all games with set counts", async () => {
       const games = [
         { id: "pokemon", name: "Pokemon TCG", _count: { sets: 10 } },
-        { id: "onepiece", name: "One Piece TCG", _count: { sets: 5 } },
       ];
       mockPrisma.tcgGame.findMany.mockResolvedValue(games);
 
