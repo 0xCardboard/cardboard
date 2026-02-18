@@ -89,7 +89,7 @@ describe("pokemonTcgAdapter", () => {
       await pokemonTcgAdapter.fetchSets();
 
       expect(mockFetch).toHaveBeenCalledWith(
-        "https://api.pokemontcg.io/v2/sets?orderBy=-releaseDate&pageSize=5",
+        "https://api.pokemontcg.io/v2/sets?orderBy=-releaseDate&pageSize=250&page=1",
         { headers: {} }
       );
     });
