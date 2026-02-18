@@ -211,7 +211,7 @@ model RefreshToken {
 // ─── Card Catalog ───────────────────────────────────────
 
 model TcgGame {
-  id   String @id // "pokemon", "onepiece", etc.
+  id   String @id // e.g. "pokemon"
   name String
 
   sets CardSet[]

@@ -7,6 +7,22 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
   console.log("Seeding database...");
 
+  // --- Cleanup stale data from previous seeds ---
+  // Delete cards not in current seed, then orphaned sets/games
+  const seedCardIds = [
+    "sv3pt5-1", "sv3pt5-4", "sv3pt5-6", "sv3pt5-7", "sv3pt5-25", "sv3pt5-94", "sv3pt5-133", "sv3pt5-150",
+    "base1-4", "base1-2", "base1-15", "base1-58",
+  ];
+  const seedSetIds = ["sv3pt5", "base1"];
+  const seedGameIds = ["pokemon"];
+
+  const deletedCards = await prisma.card.deleteMany({ where: { id: { notIn: seedCardIds } } });
+  const deletedSets = await prisma.cardSet.deleteMany({ where: { id: { notIn: seedSetIds } } });
+  const deletedGames = await prisma.tcgGame.deleteMany({ where: { id: { notIn: seedGameIds } } });
+  if (deletedCards.count || deletedSets.count || deletedGames.count) {
+    console.log(`  Cleanup: removed ${deletedCards.count} cards, ${deletedSets.count} sets, ${deletedGames.count} games`);
+  }
+
   // --- Games ---
   await prisma.tcgGame.upsert({
     where: { id: "pokemon" },
