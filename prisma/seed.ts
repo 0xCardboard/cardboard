@@ -10,10 +10,10 @@ async function main() {
   // --- Cleanup stale data from previous seeds ---
   // Delete cards not in current seed, then orphaned sets/games
   const seedCardIds = [
-    "sv3pt5-1", "sv3pt5-4", "sv3pt5-6", "sv3pt5-7", "sv3pt5-25", "sv3pt5-94", "sv3pt5-133", "sv3pt5-150",
+    "sv03.5-1", "sv03.5-4", "sv03.5-6", "sv03.5-7", "sv03.5-25", "sv03.5-94", "sv03.5-133", "sv03.5-150",
     "base1-4", "base1-2", "base1-15", "base1-58",
   ];
-  const seedSetIds = ["sv3pt5", "base1"];
+  const seedSetIds = ["sv03.5", "base1"];
   const seedGameIds = ["pokemon"];
 
   const deletedCards = await prisma.card.deleteMany({ where: { id: { notIn: seedCardIds } } });
@@ -32,10 +32,10 @@ async function main() {
   console.log("  Games: 1");
 
   // --- Pokemon Sets ---
-  // sv3pt5 = Pokemon 151 (cards follow National Pokedex order, so name-to-number mapping is guaranteed)
+  // sv03.5 = Pokemon 151 (TCGdex ID; cards follow National Pokedex order)
   // base1 = Original Base Set (iconic classic cards)
   const pokemonSets = [
-    { id: "sv3pt5", name: "Pokemon 151", releaseDate: "2023-09-22", totalCards: 207, logoUrl: "https://assets.tcgdex.net/en/sv/sv3pt5/logo.png" },
+    { id: "sv03.5", name: "151", releaseDate: "2023-09-22", totalCards: 207, logoUrl: "https://assets.tcgdex.net/en/sv/sv03.5/logo.png" },
     { id: "base1", name: "Base Set", releaseDate: "1999-01-09", totalCards: 102, logoUrl: "https://assets.tcgdex.net/en/base/base1/logo.png" },
   ];
 
@@ -50,16 +50,16 @@ async function main() {
   console.log("  Sets: 2");
 
   // --- Pokemon Cards ---
-  // sv3pt5 (Pokemon 151): card numbers = National Pokedex numbers, so images are guaranteed correct
+  // sv03.5 (Pokemon 151): card numbers = National Pokedex numbers, so images are guaranteed correct
   const pokemonCards = [
-    { id: "sv3pt5-1", name: "Bulbasaur", setId: "sv3pt5", number: "001", rarity: "Common", supertype: "Pokemon", subtypes: ["Basic"], imageUrl: "https://assets.tcgdex.net/en/sv/sv3pt5/1/low.webp", imageUrlHiRes: "https://assets.tcgdex.net/en/sv/sv3pt5/1/high.webp" },
-    { id: "sv3pt5-4", name: "Charmander", setId: "sv3pt5", number: "004", rarity: "Common", supertype: "Pokemon", subtypes: ["Basic"], imageUrl: "https://assets.tcgdex.net/en/sv/sv3pt5/4/low.webp", imageUrlHiRes: "https://assets.tcgdex.net/en/sv/sv3pt5/4/high.webp" },
-    { id: "sv3pt5-6", name: "Charizard ex", setId: "sv3pt5", number: "006", rarity: "Double Rare", supertype: "Pokemon", subtypes: ["Stage 2", "ex"], imageUrl: "https://assets.tcgdex.net/en/sv/sv3pt5/6/low.webp", imageUrlHiRes: "https://assets.tcgdex.net/en/sv/sv3pt5/6/high.webp" },
-    { id: "sv3pt5-7", name: "Squirtle", setId: "sv3pt5", number: "007", rarity: "Common", supertype: "Pokemon", subtypes: ["Basic"], imageUrl: "https://assets.tcgdex.net/en/sv/sv3pt5/7/low.webp", imageUrlHiRes: "https://assets.tcgdex.net/en/sv/sv3pt5/7/high.webp" },
-    { id: "sv3pt5-25", name: "Pikachu", setId: "sv3pt5", number: "025", rarity: "Common", supertype: "Pokemon", subtypes: ["Basic"], imageUrl: "https://assets.tcgdex.net/en/sv/sv3pt5/25/low.webp", imageUrlHiRes: "https://assets.tcgdex.net/en/sv/sv3pt5/25/high.webp" },
-    { id: "sv3pt5-94", name: "Gengar", setId: "sv3pt5", number: "094", rarity: "Uncommon", supertype: "Pokemon", subtypes: ["Stage 2"], imageUrl: "https://assets.tcgdex.net/en/sv/sv3pt5/94/low.webp", imageUrlHiRes: "https://assets.tcgdex.net/en/sv/sv3pt5/94/high.webp" },
-    { id: "sv3pt5-133", name: "Eevee", setId: "sv3pt5", number: "133", rarity: "Common", supertype: "Pokemon", subtypes: ["Basic"], imageUrl: "https://assets.tcgdex.net/en/sv/sv3pt5/133/low.webp", imageUrlHiRes: "https://assets.tcgdex.net/en/sv/sv3pt5/133/high.webp" },
-    { id: "sv3pt5-150", name: "Mewtwo ex", setId: "sv3pt5", number: "150", rarity: "Double Rare", supertype: "Pokemon", subtypes: ["Basic", "ex"], imageUrl: "https://assets.tcgdex.net/en/sv/sv3pt5/150/low.webp", imageUrlHiRes: "https://assets.tcgdex.net/en/sv/sv3pt5/150/high.webp" },
+    { id: "sv03.5-1", name: "Bulbasaur", setId: "sv03.5", number: "001", rarity: "Common", supertype: "Pokemon", subtypes: ["Basic"], imageUrl: "https://assets.tcgdex.net/en/sv/sv03.5/1/low.webp", imageUrlHiRes: "https://assets.tcgdex.net/en/sv/sv03.5/1/high.webp" },
+    { id: "sv03.5-4", name: "Charmander", setId: "sv03.5", number: "004", rarity: "Common", supertype: "Pokemon", subtypes: ["Basic"], imageUrl: "https://assets.tcgdex.net/en/sv/sv03.5/4/low.webp", imageUrlHiRes: "https://assets.tcgdex.net/en/sv/sv03.5/4/high.webp" },
+    { id: "sv03.5-6", name: "Charizard ex", setId: "sv03.5", number: "006", rarity: "Double Rare", supertype: "Pokemon", subtypes: ["Stage 2", "ex"], imageUrl: "https://assets.tcgdex.net/en/sv/sv03.5/6/low.webp", imageUrlHiRes: "https://assets.tcgdex.net/en/sv/sv03.5/6/high.webp" },
+    { id: "sv03.5-7", name: "Squirtle", setId: "sv03.5", number: "007", rarity: "Common", supertype: "Pokemon", subtypes: ["Basic"], imageUrl: "https://assets.tcgdex.net/en/sv/sv03.5/7/low.webp", imageUrlHiRes: "https://assets.tcgdex.net/en/sv/sv03.5/7/high.webp" },
+    { id: "sv03.5-25", name: "Pikachu", setId: "sv03.5", number: "025", rarity: "Common", supertype: "Pokemon", subtypes: ["Basic"], imageUrl: "https://assets.tcgdex.net/en/sv/sv03.5/25/low.webp", imageUrlHiRes: "https://assets.tcgdex.net/en/sv/sv03.5/25/high.webp" },
+    { id: "sv03.5-94", name: "Gengar", setId: "sv03.5", number: "094", rarity: "Uncommon", supertype: "Pokemon", subtypes: ["Stage 2"], imageUrl: "https://assets.tcgdex.net/en/sv/sv03.5/94/low.webp", imageUrlHiRes: "https://assets.tcgdex.net/en/sv/sv03.5/94/high.webp" },
+    { id: "sv03.5-133", name: "Eevee", setId: "sv03.5", number: "133", rarity: "Common", supertype: "Pokemon", subtypes: ["Basic"], imageUrl: "https://assets.tcgdex.net/en/sv/sv03.5/133/low.webp", imageUrlHiRes: "https://assets.tcgdex.net/en/sv/sv03.5/133/high.webp" },
+    { id: "sv03.5-150", name: "Mewtwo ex", setId: "sv03.5", number: "150", rarity: "Double Rare", supertype: "Pokemon", subtypes: ["Basic", "ex"], imageUrl: "https://assets.tcgdex.net/en/sv/sv03.5/150/low.webp", imageUrlHiRes: "https://assets.tcgdex.net/en/sv/sv03.5/150/high.webp" },
     // base1 (Original Base Set): well-known card-to-number mapping
     { id: "base1-4", name: "Charizard", setId: "base1", number: "4", rarity: "Rare Holo", supertype: "Pokemon", subtypes: ["Stage 2"], imageUrl: "https://assets.tcgdex.net/en/base/base1/4/low.webp", imageUrlHiRes: "https://assets.tcgdex.net/en/base/base1/4/high.webp" },
     { id: "base1-2", name: "Blastoise", setId: "base1", number: "2", rarity: "Rare Holo", supertype: "Pokemon", subtypes: ["Stage 2"], imageUrl: "https://assets.tcgdex.net/en/base/base1/2/low.webp", imageUrlHiRes: "https://assets.tcgdex.net/en/base/base1/2/high.webp" },
