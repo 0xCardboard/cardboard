@@ -9,45 +9,43 @@ interface CardDetailProps {
 
 export function CardDetail({ card }: CardDetailProps) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       <div>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           {card.set.game.name} &middot; {card.set.name}
         </p>
-        <h1 className="text-3xl font-bold mt-1 font-[family-name:var(--font-display)]">{card.name}</h1>
+        <h1 className="text-lg font-bold mt-0.5 font-[family-name:var(--font-display)]">{card.name}</h1>
         {card.number && (
-          <p className="text-muted-foreground mt-1 font-[family-name:var(--font-mono)]">#{card.number}</p>
+          <p className="text-xs text-muted-foreground font-[family-name:var(--font-mono)]">#{card.number}</p>
         )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-4">
-        {/* Price */}
-        <div className="rounded-xl border border-border/50 bg-card/50 p-4">
-          <p className="text-sm text-muted-foreground">Market Price</p>
-          <p className="text-3xl font-bold text-gradient font-[family-name:var(--font-display)]">
-            {formatPrice(card.marketPrice)}
+      {/* Price */}
+      <div className="rounded-lg border border-border/50 bg-card/50 p-3">
+        <p className="text-xs text-muted-foreground">Market Price</p>
+        <p className="text-xl font-bold text-gradient font-[family-name:var(--font-display)]">
+          {formatPrice(card.marketPrice)}
+        </p>
+        {card.lastPriceSync && (
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Last updated: {new Date(card.lastPriceSync).toLocaleDateString()}
           </p>
-          {card.lastPriceSync && (
-            <p className="text-xs text-muted-foreground mt-1">
-              Last updated: {new Date(card.lastPriceSync).toLocaleDateString()}
-            </p>
-          )}
-        </div>
+        )}
+      </div>
 
-        {/* Badges */}
-        <div className="flex flex-wrap gap-2">
-          {card.rarity && (
-            <Badge variant="secondary" className="rounded-lg">{card.rarity}</Badge>
-          )}
-          {card.supertype && (
-            <Badge variant="outline" className="rounded-lg">{card.supertype}</Badge>
-          )}
-          {card.subtypes?.map((subtype) => (
-            <Badge key={subtype} variant="outline" className="rounded-lg">
-              {subtype}
-            </Badge>
-          ))}
-        </div>
+      {/* Badges */}
+      <div className="flex flex-wrap gap-1.5">
+        {card.rarity && (
+          <Badge variant="secondary" className="rounded-md text-xs">{card.rarity}</Badge>
+        )}
+        {card.supertype && (
+          <Badge variant="outline" className="rounded-md text-xs">{card.supertype}</Badge>
+        )}
+        {card.subtypes?.map((subtype) => (
+          <Badge key={subtype} variant="outline" className="rounded-md text-xs">
+            {subtype}
+          </Badge>
+        ))}
       </div>
     </div>
   );

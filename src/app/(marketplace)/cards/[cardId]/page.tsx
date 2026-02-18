@@ -36,13 +36,12 @@ export default async function CardDetailPage({
         <ArrowLeft className="h-3.5 w-3.5" />
         Back to browse
       </Link>
-      <CardDetail card={card} />
-
-      {/* Card Image + Order Book + Order Form */}
-      <div className="mt-8 grid grid-cols-1 lg:grid-cols-[280px_1fr_280px] gap-6">
-        {/* Left: Card Image + Price History */}
-        <div className="space-y-6">
+      {/* Card Image + Info + Order Book + Order Form */}
+      <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr_280px] gap-6">
+        {/* Left: Card Image + Card Info + Price History */}
+        <div className="space-y-4">
           <CardImage card={card} />
+          <CardDetail card={card} />
           <CardPriceHistory card={card} />
         </div>
 
