@@ -1,7 +1,6 @@
 import type { CardSyncAdapter, ExternalCardSet, ExternalCard } from "@/types/card";
 
 const BASE_URL = "https://api.pokemontcg.io/v2";
-const DEFAULT_SET_LIMIT = 5;
 
 function getHeaders(): Record<string, string> {
   const headers: Record<string, string> = {};
@@ -110,15 +109,29 @@ export const pokemonTcgAdapter: CardSyncAdapter = {
   gameName: "Pokemon TCG",
 
   async fetchSets(): Promise<ExternalCardSet[]> {
-    const url = `${BASE_URL}/sets?orderBy=-releaseDate&pageSize=${DEFAULT_SET_LIMIT}`;
-    const response = await fetch(url, { headers: getHeaders() });
+    const sets: ExternalCardSet[] = [];
+    let page = 1;
+    const pageSize = 250;
+    const delay = getDelay();
 
-    if (!response.ok) {
-      throw new Error(`Pokemon TCG API error fetching sets: ${response.status} ${response.statusText}`);
+    while (true) {
+      const url = `${BASE_URL}/sets?orderBy=-releaseDate&pageSize=${pageSize}&page=${page}`;
+      const response = await fetch(url, { headers: getHeaders() });
+
+      if (!response.ok) {
+        throw new Error(`Pokemon TCG API error fetching sets: ${response.status} ${response.statusText}`);
+      }
+
+      const json = (await response.json()) as PokemonTcgResponse<PokemonTcgSet>;
+      sets.push(...json.data.map(mapSet));
+
+      if (sets.length >= json.totalCount) break;
+
+      page++;
+      await sleep(delay);
     }
 
-    const json = (await response.json()) as PokemonTcgResponse<PokemonTcgSet>;
-    return json.data.map(mapSet);
+    return sets;
   },
 
   async fetchCards(setId: string): Promise<ExternalCard[]> {

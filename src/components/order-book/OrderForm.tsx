@@ -11,7 +11,8 @@ interface OrderFormProps {
   cardId: string;
 }
 
-const GRADING_COMPANIES = ["PSA", "BGS", "CGC"] as const;
+const GRADING_COMPANY = "PSA" as const;
+const LAUNCH_GRADE = 10;
 
 export function OrderForm({ cardId }: OrderFormProps) {
   const router = useRouter();
@@ -21,8 +22,6 @@ export function OrderForm({ cardId }: OrderFormProps) {
   const [price, setPrice] = useState("");
   const [quantity, setQuantity] = useState("1");
   const [certNumber, setCertNumber] = useState("");
-  const [gradingCompany, setGradingCompany] = useState<"PSA" | "BGS" | "CGC">("PSA");
-  const [grade, setGrade] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -60,13 +59,9 @@ export function OrderForm({ cardId }: OrderFormProps) {
         if (!certNumber.trim()) {
           throw new Error("Please enter the certificate number");
         }
-        const gradeNum = parseFloat(grade);
-        if (isNaN(gradeNum) || gradeNum < 1 || gradeNum > 10) {
-          throw new Error("Please enter a valid grade (1-10)");
-        }
         body.certNumber = certNumber.trim();
-        body.gradingCompany = gradingCompany;
-        body.grade = gradeNum;
+        body.gradingCompany = GRADING_COMPANY;
+        body.grade = LAUNCH_GRADE;
       }
 
       const res = await fetch("/api/orders", {
@@ -88,7 +83,6 @@ export function OrderForm({ cardId }: OrderFormProps) {
       setPrice("");
       setQuantity("1");
       setCertNumber("");
-      setGrade("");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to place order");
@@ -200,18 +194,21 @@ export function OrderForm({ cardId }: OrderFormProps) {
                 Card Details
               </p>
             </div>
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Grading Company</label>
-              <select
-                value={gradingCompany}
-                onChange={(e) => setGradingCompany(e.target.value as "PSA" | "BGS" | "CGC")}
-                className="flex h-10 w-full rounded-xl border border-border/60 bg-secondary/50 px-3 py-1 text-sm transition-colors focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20"
-              >
-                {GRADING_COMPANIES.map((gc) => (
-                  <option key={gc} value={gc}>{gc}</option>
-                ))}
-              </select>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Grading Company</label>
+                <div className="flex h-10 w-full items-center rounded-xl border border-border/60 bg-secondary/50 px-3 text-sm font-medium">
+                  {GRADING_COMPANY}
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Grade</label>
+                <div className="flex h-10 w-full items-center rounded-xl border border-border/60 bg-secondary/50 px-3 text-sm font-medium font-[family-name:var(--font-mono)]">
+                  {LAUNCH_GRADE}
+                </div>
+              </div>
             </div>
+            <p className="text-xs text-muted-foreground">PSA 10 only at launch</p>
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Certificate Number</label>
               <Input
@@ -219,20 +216,6 @@ export function OrderForm({ cardId }: OrderFormProps) {
                 placeholder="e.g. 12345678"
                 value={certNumber}
                 onChange={(e) => setCertNumber(e.target.value)}
-                required
-                className="h-10 rounded-xl bg-secondary/50 border-border/60 focus:border-primary/50 font-[family-name:var(--font-mono)]"
-              />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Grade</label>
-              <Input
-                type="number"
-                step="0.5"
-                min="1"
-                max="10"
-                placeholder="e.g. 9.5"
-                value={grade}
-                onChange={(e) => setGrade(e.target.value)}
                 required
                 className="h-10 rounded-xl bg-secondary/50 border-border/60 focus:border-primary/50 font-[family-name:var(--font-mono)]"
               />
