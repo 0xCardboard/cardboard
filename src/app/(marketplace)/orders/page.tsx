@@ -162,18 +162,25 @@ export default function OrdersPage() {
     const token = getAccessToken();
     if (!token || !trackingNumber.trim()) return;
 
+    const order = orders.find((o) => o.id === orderId);
+    if (!order?.trade || !order.cardInstance) {
+      setShippingError("Missing trade or card instance info");
+      return;
+    }
+
     setShippingSubmitting(true);
     setShippingError(null);
 
     try {
-      const res = await fetch("/api/shipments", {
+      const res = await fetch("/api/shipments/inbound", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          orderId,
+          tradeId: order.trade.id,
+          cardInstanceId: order.cardInstance.id,
           trackingNumber: trackingNumber.trim(),
           carrier: "USPS",
         }),
