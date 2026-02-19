@@ -80,6 +80,23 @@ export async function processTradePayment(tradeId: string): Promise<void> {
         .catch(() => {
           // Queue unavailable — will need manual monitoring
         });
+
+      // Ship deadline warning: fires 24h before the deadline (at 2 business days)
+      const warningDelay = businessDayDelayMs(2);
+      if (warningDelay > 0 && warningDelay < deadlineDelay) {
+        shipDeadlineQueue
+          .add(
+            "ship-deadline-warning",
+            { tradeId },
+            {
+              delay: warningDelay,
+              jobId: `ship-warning-${tradeId}`,
+            },
+          )
+          .catch(() => {
+            // Queue unavailable
+          });
+      }
     }
   } catch {
     // Payment failed — enqueue retry

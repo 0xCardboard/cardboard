@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { formatPrice } from "@/lib/format";
+import { useOrderBook as useOrderBookWs } from "@/hooks/useWebSocket";
 import type { OrderBookSnapshot, OrderBookEntry } from "@/types/order";
 
 interface OrderBookProps {
@@ -9,10 +10,13 @@ interface OrderBookProps {
   initialData?: OrderBookSnapshot;
 }
 
+const POLL_INTERVAL_FALLBACK = 10_000; // 10s fallback when WS disconnected
+
 export function OrderBook({ cardId, initialData }: OrderBookProps) {
   const [data, setData] = useState<OrderBookSnapshot | null>(initialData ?? null);
   const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchOrderBook = useCallback(async () => {
     try {
@@ -28,11 +32,36 @@ export function OrderBook({ cardId, initialData }: OrderBookProps) {
     }
   }, [cardId]);
 
+  // WebSocket: real-time order book updates trigger a fresh fetch
+  const handleWsUpdate = useCallback(() => {
+    fetchOrderBook();
+  }, [fetchOrderBook]);
+
+  const { connected } = useOrderBookWs(cardId, handleWsUpdate);
+
+  // Initial fetch
   useEffect(() => {
-    if (!initialData) fetchOrderBook();
-    const interval = setInterval(fetchOrderBook, 5000);
-    return () => clearInterval(interval);
-  }, [fetchOrderBook, initialData]);
+    fetchOrderBook();
+  }, [fetchOrderBook]);
+
+  // Fallback: poll when WebSocket is not connected
+  useEffect(() => {
+    if (connected) {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+      return;
+    }
+
+    pollRef.current = setInterval(fetchOrderBook, POLL_INTERVAL_FALLBACK);
+    return () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    };
+  }, [connected, fetchOrderBook]);
 
   if (loading) {
     return (
@@ -56,7 +85,19 @@ export function OrderBook({ cardId, initialData }: OrderBookProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold font-[family-name:var(--font-display)]">Order Book</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold font-[family-name:var(--font-display)]">Order Book</h2>
+          {connected ? (
+            <span className="flex items-center gap-1 text-[10px] font-medium text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded-full">
+              <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
+              Live
+            </span>
+          ) : (
+            <span className="text-[10px] text-muted-foreground/60 px-1.5 py-0.5">
+              Polling
+            </span>
+          )}
+        </div>
         {data.spread !== null && (
           <span className="text-xs font-[family-name:var(--font-mono)] text-muted-foreground px-2 py-1 rounded-lg bg-secondary/50">
             Spread: {formatPrice(data.spread)}

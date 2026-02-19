@@ -83,6 +83,15 @@ export async function openDispute(
     );
   }
 
+  // Notify the seller (counterparty)
+  await createNotification(
+    trade.sellerId,
+    "DISPUTE_OPENED",
+    "Dispute Filed Against Your Trade",
+    `A buyer has filed a dispute for trade ${tradeId}. Reason: ${reason}. Our team will review and reach out if needed.`,
+    { disputeId: dispute.id, tradeId, reason },
+  );
+
   // Update buyer's reputation dispute count
   await prisma.reputation.updateMany({
     where: { userId },
@@ -130,6 +139,25 @@ export async function resolveDispute(
       `Dispute resolved: ${adminNotes}`,
       refundAmount,
     );
+
+    await createNotification(
+      dispute.userId,
+      "DISPUTE_RESOLVED",
+      "Dispute Resolved — Refund Issued",
+      `Your dispute has been resolved in your favor. A refund has been issued.${adminNotes ? ` Details: ${adminNotes}` : ""}`,
+      { disputeId, resolution, refundAmount },
+    );
+
+    // Notify seller about the dispute resolution
+    if (dispute.trade) {
+      await createNotification(
+        dispute.trade.sellerId,
+        "DISPUTE_RESOLVED",
+        "Dispute Resolved — Buyer Refunded",
+        `A dispute for trade ${dispute.tradeId} has been resolved with a refund to the buyer.${adminNotes ? ` Details: ${adminNotes}` : ""}`,
+        { disputeId, resolution },
+      );
+    }
   }
 
   if (resolution === "RESOLVED_REPLACEMENT") {
@@ -141,6 +169,17 @@ export async function resolveDispute(
       `Your dispute has been resolved. A replacement card will be shipped to you.`,
       { disputeId, resolution },
     );
+
+    // Notify seller
+    if (dispute.trade) {
+      await createNotification(
+        dispute.trade.sellerId,
+        "DISPUTE_RESOLVED",
+        "Dispute Resolved — Replacement Required",
+        `A dispute for trade ${dispute.tradeId} has been resolved. A replacement card will be sent to the buyer.${adminNotes ? ` Details: ${adminNotes}` : ""}`,
+        { disputeId, resolution },
+      );
+    }
   }
 
   if (resolution === "RESOLVED_REJECTED") {
@@ -151,6 +190,17 @@ export async function resolveDispute(
       `Your dispute has been reviewed and rejected.${adminNotes ? ` Reason: ${adminNotes}` : ""}`,
       { disputeId, resolution },
     );
+
+    // Notify seller that the dispute was rejected (in their favor)
+    if (dispute.trade) {
+      await createNotification(
+        dispute.trade.sellerId,
+        "DISPUTE_RESOLVED",
+        "Dispute Dismissed",
+        `A dispute filed against trade ${dispute.tradeId} has been reviewed and dismissed.`,
+        { disputeId, resolution },
+      );
+    }
   }
 }
 

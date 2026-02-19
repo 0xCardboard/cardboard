@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/db";
 import { AppError } from "@/lib/errors";
 import { matchOrder } from "@/services/matching.service";
+import { createNotification } from "@/services/notification.service";
+import { publish } from "@/lib/websocket";
 import { orderMatchingQueue } from "@/jobs/queue";
 import type {
   PlaceOrderInput,
@@ -207,6 +209,13 @@ export async function placeOrder(
     });
   }
 
+  // Publish order book update via WebSocket (new order on the book)
+  try {
+    publish(`orderbook:${input.cardId}`, { event: "new_order", orderId: order.id, side: input.side });
+  } catch {
+    // WebSocket server may not be running
+  }
+
   // Run matching inline so orders fill immediately
   const matchResult = await matchOrder(order.id);
 
@@ -293,6 +302,26 @@ export async function cancelOrder(
         where: { id: order.cardInstanceId },
         data: { status: "VERIFIED" },
       });
+    }
+  }
+
+  // Notify the user
+  const cardName = order.orderBook?.card?.name ?? "Unknown Card";
+  await createNotification(
+    userId,
+    "ORDER_CANCELLED",
+    "Order Cancelled",
+    `Your ${order.side.toLowerCase()} order for ${cardName} has been cancelled.`,
+    { orderId },
+  );
+
+  // Publish order book update via WebSocket
+  const cardId = order.orderBook?.card?.id;
+  if (cardId) {
+    try {
+      publish(`orderbook:${cardId}`, { event: "cancel", orderId });
+    } catch {
+      // WebSocket server may not be running
     }
   }
 
