@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
 import { AppError } from "@/lib/errors";
-import { publish } from "@/lib/websocket";
+import { publish } from "@/lib/publish";
 import { sendNotificationEmail } from "@/services/email.service";
 import type { NotificationType } from "@/generated/prisma/client";
 

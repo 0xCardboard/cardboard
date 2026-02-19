@@ -1,6 +1,7 @@
 import { WebSocketServer, WebSocket } from "ws";
 import type { IncomingMessage } from "http";
 import type { Server } from "http";
+import Redis from "ioredis";
 import { verifyAccessToken } from "@/services/auth.service";
 
 interface AuthenticatedSocket extends WebSocket {
@@ -127,11 +128,46 @@ function handleMessage(
   }
 }
 
+
 /**
- * Publish a message to all subscribers of a channel.
- * Can be called from any service.
+ * Get the current WebSocket server instance.
  */
-export function publish(channel: string, data: unknown): void {
+export function getWebSocketServer(): WebSocketServer | null {
+  return wss;
+}
+
+const REDIS_CHANNEL = "ws:broadcast";
+
+/**
+ * Subscribe to Redis pub/sub and forward messages to local WebSocket clients.
+ * Call this once at WS server startup so that publish() calls from
+ * other processes (Next.js API, workers) reach connected browsers.
+ */
+export function subscribeToRedis(): void {
+  const sub = new Redis(process.env.REDIS_URL || "redis://localhost:6379", {
+    maxRetriesPerRequest: null,
+  });
+
+  sub.subscribe(REDIS_CHANNEL).catch((err) => {
+    console.error("[ws] Failed to subscribe to Redis channel:", err);
+  });
+
+  sub.on("message", (_redisChannel: string, message: string) => {
+    try {
+      const { channel, data } = JSON.parse(message);
+      broadcastToChannel(channel, data);
+    } catch {
+      // Ignore malformed messages
+    }
+  });
+
+  console.log("[ws] Subscribed to Redis pub/sub for broadcast messages");
+}
+
+/**
+ * Broadcast a message to all WebSocket clients subscribed to a channel.
+ */
+function broadcastToChannel(channel: string, data: unknown): void {
   const sockets = channels.get(channel);
   if (!sockets || sockets.size === 0) return;
 
@@ -142,11 +178,4 @@ export function publish(channel: string, data: unknown): void {
       socket.send(message);
     }
   }
-}
-
-/**
- * Get the current WebSocket server instance.
- */
-export function getWebSocketServer(): WebSocketServer | null {
-  return wss;
 }

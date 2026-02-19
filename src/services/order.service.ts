@@ -2,7 +2,7 @@ import { prisma } from "@/lib/db";
 import { AppError } from "@/lib/errors";
 import { matchOrder } from "@/services/matching.service";
 import { createNotification } from "@/services/notification.service";
-import { publish } from "@/lib/websocket";
+import { publish } from "@/lib/publish";
 import { orderMatchingQueue } from "@/jobs/queue";
 import type {
   PlaceOrderInput,

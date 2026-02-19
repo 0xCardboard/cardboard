@@ -2,7 +2,7 @@ import { prisma } from "@/lib/db";
 import { processTradePayment } from "@/services/escrow.service";
 import { createNotification } from "@/services/notification.service";
 import { washTradeDetectionQueue } from "@/jobs/queue";
-import { publish } from "@/lib/websocket";
+import { publish } from "@/lib/publish";
 
 const PLATFORM_FEE_RATE = parseFloat(process.env.PLATFORM_FEE_RATE || "0.05");
 
