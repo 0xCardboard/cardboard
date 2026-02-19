@@ -157,7 +157,7 @@ function AuthenticatedDashboard({ userName }: { userName: string }) {
                     <ShoppingCart className="h-5 w-5 text-blue-400" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Open Orders</p>
+                    <p className="text-sm text-muted-foreground">Open Trades</p>
                     <p className="text-xl font-bold font-[family-name:var(--font-display)]">
                       {formatNumber(data.openOrders)}
                     </p>

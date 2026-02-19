@@ -231,10 +231,10 @@ export default function OrdersPage() {
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-6 font-[family-name:var(--font-display)]">My Orders</h1>
+        <h1 className="text-3xl font-bold mb-6 font-[family-name:var(--font-display)]">My Trades</h1>
         <div className="flex items-center gap-2 text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Loading orders...
+          Loading trades...
         </div>
       </div>
     );
@@ -243,8 +243,8 @@ export default function OrdersPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold font-[family-name:var(--font-display)]">My Orders</h1>
-        <p className="text-muted-foreground mt-1">Track and manage your open and filled orders.</p>
+        <h1 className="text-3xl font-bold font-[family-name:var(--font-display)]">My Trades</h1>
+        <p className="text-muted-foreground mt-1">Your bids, asks, and filled trades.</p>
       </div>
 
       {/* Filters */}
@@ -286,7 +286,7 @@ export default function OrdersPage() {
       {orders.length === 0 ? (
         <div className="rounded-2xl border border-border/50 bg-card/50 p-12 text-center">
           <p className="text-muted-foreground">
-            No orders found.{" "}
+            No trades yet.{" "}
             <Link href="/cards" className="text-primary hover:underline">
               Browse cards
             </Link>{" "}
@@ -515,7 +515,7 @@ export default function OrdersPage() {
           {pagination && pagination.totalPages > 1 && (
             <div className="flex items-center justify-between px-6 py-4 border-t border-border/30">
               <p className="text-sm text-muted-foreground">
-                Page {pagination.page} of {pagination.totalPages} ({pagination.total} orders)
+                Page {pagination.page} of {pagination.totalPages} ({pagination.total} trades)
               </p>
               <div className="flex gap-2">
                 <Button

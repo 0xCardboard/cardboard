@@ -245,7 +245,7 @@ function SellPageContent() {
         </div>
         <div className="flex gap-3 justify-center mt-8">
           <Button variant="outline" asChild>
-            <Link href="/orders">View My Orders</Link>
+            <Link href="/orders">View My Trades</Link>
           </Button>
           <Button asChild>
             <Link href="/sell">Sell Another Card</Link>

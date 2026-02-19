@@ -86,7 +86,7 @@ export function ProfileOverview({ profile }: { profile: ProfileData }) {
               <div className="h-9 w-9 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
                 <Package className="h-4.5 w-4.5 text-purple-400" />
               </div>
-              <p className="text-sm text-muted-foreground">Active Orders</p>
+              <p className="text-sm text-muted-foreground">Active Trades</p>
             </div>
             <p className="text-2xl font-bold font-[family-name:var(--font-mono)]">
               {profile._count.orders}
@@ -131,9 +131,9 @@ export function ProfileOverview({ profile }: { profile: ProfileData }) {
                   <ShoppingCart className="h-4.5 w-4.5 text-primary" />
                 </div>
                 <div>
-                  <p className="font-medium">My Orders</p>
+                  <p className="font-medium">My Trades</p>
                   <p className="text-sm text-muted-foreground">
-                    {profile._count.orders} orders
+                    {profile._count.orders} trades
                   </p>
                 </div>
               </div>

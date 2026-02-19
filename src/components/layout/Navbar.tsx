@@ -52,7 +52,7 @@ export function Navbar() {
                 href="/orders"
                 className="px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-accent/50"
               >
-                Orders
+                Trades
               </Link>
               <Link
                 href="/portfolio"
@@ -143,7 +143,7 @@ export function Navbar() {
                   className="block px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent/50"
                   onClick={() => setMobileOpen(false)}
                 >
-                  My Orders
+                  My Trades
                 </Link>
                 <Link
                   href="/portfolio"
