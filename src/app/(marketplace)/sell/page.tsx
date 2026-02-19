@@ -71,6 +71,9 @@ function SellPageContent() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
+  // Tracks whether the card is already verified and in the warehouse
+  const [isVaultedCard, setIsVaultedCard] = useState(false);
+
   // Pre-populate from query params (e.g., from portfolio "List for Sale")
   useEffect(() => {
     const cardId = searchParams.get("cardId");
@@ -88,6 +91,9 @@ function SellPageContent() {
     }
     if (cert) {
       setCertNumber(cert);
+    }
+    if (cardId && cert) {
+      setIsVaultedCard(true);
     }
   }, [searchParams]);
 
@@ -232,16 +238,25 @@ function SellPageContent() {
         </h1>
         <p className="text-muted-foreground mt-3 leading-relaxed">
           Your sell order for <strong>{selectedCard?.name}</strong> is now on the order book.
-          When a buyer matches your price, you&apos;ll be notified to ship your card to our warehouse.
+          {isVaultedCard
+            ? " Your card is already in our warehouse, so there's nothing else you need to do until it sells."
+            : " When a buyer matches your price, you'll be notified to ship your card to our warehouse."}
         </p>
         <div className="mt-6 rounded-xl bg-secondary/50 border border-border/50 p-4 text-left text-sm space-y-2">
           <p className="font-medium">What happens next:</p>
-          <ul className="space-y-1.5 text-muted-foreground">
-            <li>1. A buyer matches your order</li>
-            <li>2. You ship your card within 3 business days</li>
-            <li>3. Our team verifies the card</li>
-            <li>4. Payment is released to you</li>
-          </ul>
+          {isVaultedCard ? (
+            <ul className="space-y-1.5 text-muted-foreground">
+              <li>1. A buyer matches your order</li>
+              <li>2. Payment is released to you</li>
+            </ul>
+          ) : (
+            <ul className="space-y-1.5 text-muted-foreground">
+              <li>1. A buyer matches your order</li>
+              <li>2. You ship your card within 3 business days</li>
+              <li>3. Our team verifies the card</li>
+              <li>4. Payment is released to you</li>
+            </ul>
+          )}
         </div>
         <div className="flex gap-3 justify-center mt-8">
           <Button variant="outline" asChild>
@@ -733,7 +748,17 @@ function SellPageContent() {
               <h3 className="font-semibold font-[family-name:var(--font-display)] mb-3">
                 What happens next
               </h3>
-              {orderType === "MARKET" && orderBook && orderBook.bids.length > 0 ? (
+              {isVaultedCard ? (
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  <p>
+                    Your card is already verified and held in our warehouse.
+                    {orderType === "MARKET" && orderBook && orderBook.bids.length > 0
+                      ? " It will match the best available buyer immediately. "
+                      : " When a buyer matches your price, "}
+                    payment will be released to you — no shipping required.
+                  </p>
+                </div>
+              ) : orderType === "MARKET" && orderBook && orderBook.bids.length > 0 ? (
                 <div className="space-y-2 text-sm text-muted-foreground">
                   <p>
                     Your card will match the best available buyer immediately.
@@ -750,12 +775,14 @@ function SellPageContent() {
                   </p>
                 </div>
               )}
-              <Link
-                href="/shipping-instructions"
-                className="inline-flex items-center gap-1 text-sm text-primary hover:underline mt-3"
-              >
-                View shipping instructions <ExternalLink className="h-3 w-3" />
-              </Link>
+              {!isVaultedCard && (
+                <Link
+                  href="/shipping-instructions"
+                  className="inline-flex items-center gap-1 text-sm text-primary hover:underline mt-3"
+                >
+                  View shipping instructions <ExternalLink className="h-3 w-3" />
+                </Link>
+              )}
             </CardContent>
           </Card>
 
