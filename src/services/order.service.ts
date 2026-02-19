@@ -226,16 +226,9 @@ export async function placeOrder(
     include: ORDER_INCLUDE,
   });
 
-  // For sell orders referencing an existing verified instance, update status to LISTED
-  if (input.side === "SELL" && cardInstanceId) {
-    const inst = await prisma.cardInstance.findUnique({ where: { id: cardInstanceId } });
-    if (inst && inst.status === "VERIFIED") {
-      await prisma.cardInstance.update({
-        where: { id: cardInstanceId },
-        data: { status: "LISTED" },
-      });
-    }
-  }
+  // For sell orders with new card instances (sell-first flow), status is already LISTED.
+  // For sell orders reusing a verified instance (vault-first), keep VERIFIED —
+  // the matching engine will detect this and handle immediate settlement.
 
   // Publish order book update via WebSocket (new order on the book)
   try {

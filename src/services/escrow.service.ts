@@ -30,7 +30,10 @@ function businessDayDelayMs(days: number): number {
  * Called inline from the matching engine after the transaction commits.
  * On failure, enqueues a retry job (buyer gets 24h to fix their payment method).
  */
-export async function processTradePayment(tradeId: string): Promise<void> {
+export async function processTradePayment(
+  tradeId: string,
+  options?: { skipShipping?: boolean },
+): Promise<void> {
   try {
     if (process.env.NODE_ENV === "development") {
       // Dev bypass: skip Stripe charge and mark trade as captured
@@ -44,58 +47,77 @@ export async function processTradePayment(tradeId: string): Promise<void> {
 
     const trade = await prisma.trade.findUnique({ where: { id: tradeId } });
     if (trade) {
-      await createNotification(
-        trade.buyerId,
-        "TRADE_FILLED",
-        "Order Filled",
-        `Your buy order was filled at $${(trade.price / 100).toFixed(2)}. Payment captured.`,
-        { tradeId },
-      );
-      await createNotification(
-        trade.sellerId,
-        "TRADE_FILLED",
-        "Order Filled — Ship Your Card",
-        `Your sell order was filled at $${(trade.price / 100).toFixed(2)}. Ship your card within 3 business days to:\n\nCardboard Warehouse\nAttn: Card Verification\n123 Trading Card Lane, Suite 100\nAustin, TX 78701\n\nInclude your username and cert number in the package. View full packing guidelines at /shipping-instructions`,
-        { tradeId, shippingInstructionsUrl: "/shipping-instructions" },
-      );
-
-      // Set ship deadline and enqueue deadline check job
-      const deadlineDelay = businessDayDelayMs(3);
-      const shipDeadline = new Date(Date.now() + deadlineDelay);
-
-      await prisma.trade.update({
-        where: { id: tradeId },
-        data: { shipDeadline },
-      });
-
-      shipDeadlineQueue
-        .add(
-          "check-shipment",
+      if (options?.skipShipping) {
+        // Vault-first: card already in warehouse — no shipping needed
+        await createNotification(
+          trade.buyerId,
+          "TRADE_FILLED",
+          "Purchase Complete",
+          `Your buy order was filled at $${(trade.price / 100).toFixed(2)}. The card is verified and has been added to your portfolio.`,
           { tradeId },
-          {
-            delay: deadlineDelay,
-            jobId: `ship-deadline-${tradeId}`,
-          },
-        )
-        .catch(() => {
-          // Queue unavailable — will need manual monitoring
+        );
+        await createNotification(
+          trade.sellerId,
+          "TRADE_FILLED",
+          "Card Sold",
+          `Your card sold at $${(trade.price / 100).toFixed(2)}. Funds will be released shortly.`,
+          { tradeId },
+        );
+      } else {
+        // Sell-first: seller needs to ship the card
+        await createNotification(
+          trade.buyerId,
+          "TRADE_FILLED",
+          "Order Filled",
+          `Your buy order was filled at $${(trade.price / 100).toFixed(2)}. Payment captured.`,
+          { tradeId },
+        );
+        await createNotification(
+          trade.sellerId,
+          "TRADE_FILLED",
+          "Order Filled — Ship Your Card",
+          `Your sell order was filled at $${(trade.price / 100).toFixed(2)}. Ship your card within 3 business days to:\n\nCardboard Warehouse\nAttn: Card Verification\n123 Trading Card Lane, Suite 100\nAustin, TX 78701\n\nInclude your username and cert number in the package. View full packing guidelines at /shipping-instructions`,
+          { tradeId, shippingInstructionsUrl: "/shipping-instructions" },
+        );
+
+        // Set ship deadline and enqueue deadline check job
+        const deadlineDelay = businessDayDelayMs(3);
+        const shipDeadline = new Date(Date.now() + deadlineDelay);
+
+        await prisma.trade.update({
+          where: { id: tradeId },
+          data: { shipDeadline },
         });
 
-      // Ship deadline warning: fires 24h before the deadline (at 2 business days)
-      const warningDelay = businessDayDelayMs(2);
-      if (warningDelay > 0 && warningDelay < deadlineDelay) {
         shipDeadlineQueue
           .add(
-            "ship-deadline-warning",
+            "check-shipment",
             { tradeId },
             {
-              delay: warningDelay,
-              jobId: `ship-warning-${tradeId}`,
+              delay: deadlineDelay,
+              jobId: `ship-deadline-${tradeId}`,
             },
           )
           .catch(() => {
-            // Queue unavailable
+            // Queue unavailable — will need manual monitoring
           });
+
+        // Ship deadline warning: fires 24h before the deadline (at 2 business days)
+        const warningDelay = businessDayDelayMs(2);
+        if (warningDelay > 0 && warningDelay < deadlineDelay) {
+          shipDeadlineQueue
+            .add(
+              "ship-deadline-warning",
+              { tradeId },
+              {
+                delay: warningDelay,
+                jobId: `ship-warning-${tradeId}`,
+              },
+            )
+            .catch(() => {
+              // Queue unavailable
+            });
+        }
       }
     }
   } catch {
