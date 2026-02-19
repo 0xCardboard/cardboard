@@ -17,6 +17,7 @@ interface TradeEntry {
   price: number;
   quantity: number;
   createdAt: string;
+  certNumber: string | null;
 }
 
 interface TradeHistoryProps {
@@ -34,7 +35,15 @@ export function TradeHistory({ cardId }: TradeHistoryProps) {
       const res = await fetch(`/api/orderbook/${cardId}/trades?limit=${MAX_DISPLAY}`);
       if (res.ok) {
         const json = await res.json();
-        setTrades(json.data ?? []);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const mapped = (json.data ?? []).map((t: any) => ({
+          id: t.id,
+          price: t.price,
+          quantity: t.quantity,
+          createdAt: t.createdAt,
+          certNumber: t.sellOrder?.cardInstance?.certNumber ?? null,
+        }));
+        setTrades(mapped);
       }
     } catch {
       // Silently fail
@@ -46,7 +55,7 @@ export function TradeHistory({ cardId }: TradeHistoryProps) {
   // WebSocket: listen for new trades on this card
   const handleWsTrade = useCallback(
     (data: unknown) => {
-      const trade = data as { tradeId?: string; price?: number; quantity?: number; timestamp?: string };
+      const trade = data as { tradeId?: string; price?: number; quantity?: number; timestamp?: string; certNumber?: string };
       if (trade.tradeId && trade.price !== undefined) {
         setTrades((prev) => {
           const entry: TradeEntry = {
@@ -54,6 +63,7 @@ export function TradeHistory({ cardId }: TradeHistoryProps) {
             price: trade.price!,
             quantity: trade.quantity ?? 1,
             createdAt: trade.timestamp ?? new Date().toISOString(),
+            certNumber: trade.certNumber ?? null,
           };
           // Prepend and cap at MAX_DISPLAY
           return [entry, ...prev].slice(0, MAX_DISPLAY);
@@ -97,6 +107,7 @@ export function TradeHistory({ cardId }: TradeHistoryProps) {
         <TableHeader>
           <TableRow className="border-border/30 hover:bg-transparent">
             <TableHead>Price</TableHead>
+            <TableHead>Cert #</TableHead>
             <TableHead className="text-right">Qty</TableHead>
             <TableHead className="text-right">Time</TableHead>
           </TableRow>
@@ -106,6 +117,9 @@ export function TradeHistory({ cardId }: TradeHistoryProps) {
             <TableRow key={trade.id} className="border-border/20 hover:bg-accent/20">
               <TableCell className="font-medium font-[family-name:var(--font-mono)]">
                 {formatPrice(trade.price)}
+              </TableCell>
+              <TableCell className="text-muted-foreground text-sm font-[family-name:var(--font-mono)]">
+                {trade.certNumber ?? "—"}
               </TableCell>
               <TableCell className="text-right">{trade.quantity}</TableCell>
               <TableCell className="text-right text-muted-foreground text-sm">
