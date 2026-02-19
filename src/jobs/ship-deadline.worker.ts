@@ -20,14 +20,53 @@ interface ShipDeadlineJobData {
 const worker = new Worker(
   QUEUE_NAMES.SHIP_DEADLINE,
   async (job: Job<ShipDeadlineJobData>) => {
-    console.log(`[ship-deadline] Checking trade ${job.data.tradeId}`);
-    await checkShipDeadline(job.data.tradeId);
+    if (job.name === "ship-deadline-warning") {
+      console.log(`[ship-deadline] Warning check for trade ${job.data.tradeId}`);
+      await sendShipDeadlineWarning(job.data.tradeId);
+    } else {
+      console.log(`[ship-deadline] Deadline check for trade ${job.data.tradeId}`);
+      await checkShipDeadline(job.data.tradeId);
+    }
   },
   {
     connection: getRedisConnection(),
     concurrency: 5,
   },
 );
+
+/**
+ * Send a reminder to the seller 24h before the ship deadline.
+ * Only fires if the seller hasn't shipped yet.
+ */
+async function sendShipDeadlineWarning(tradeId: string): Promise<void> {
+  const trade = await prisma.trade.findUnique({
+    where: { id: tradeId },
+  });
+
+  if (!trade) return;
+  if (trade.escrowStatus !== "CAPTURED") return;
+
+  // Check if seller already shipped
+  const shipment = await prisma.shipment.findFirst({
+    where: { tradeId, direction: "INBOUND" },
+  });
+
+  if (shipment) return; // Already shipped — no warning needed
+
+  const deadlineStr = trade.shipDeadline
+    ? trade.shipDeadline.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })
+    : "soon";
+
+  await createNotification(
+    trade.sellerId,
+    "SHIPMENT_UPDATE",
+    "Reminder: Ship Your Card by Tomorrow",
+    `Your shipping deadline is ${deadlineStr}. Ship your card to the warehouse to avoid trade cancellation.\n\nCardboard Warehouse\nAttn: Card Verification\n123 Trading Card Lane, Suite 100\nAustin, TX 78701\n\nView full packing guidelines at /shipping-instructions`,
+    { tradeId, shipDeadline: trade.shipDeadline?.toISOString() },
+  );
+
+  console.log(`[ship-deadline] Warning sent for trade ${tradeId}`);
+}
 
 /**
  * Check whether the seller has shipped. If no inbound shipment exists

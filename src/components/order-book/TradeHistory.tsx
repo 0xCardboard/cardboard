@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { formatPrice } from "@/lib/format";
+import { useWebSocket } from "@/hooks/useWebSocket";
 import {
   Table,
   TableBody,
@@ -22,26 +23,56 @@ interface TradeHistoryProps {
   cardId: string;
 }
 
+const MAX_DISPLAY = 10;
+
 export function TradeHistory({ cardId }: TradeHistoryProps) {
   const [trades, setTrades] = useState<TradeEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchTrades() {
-      try {
-        const res = await fetch(`/api/orderbook/${cardId}/trades?limit=10`);
-        if (res.ok) {
-          const json = await res.json();
-          setTrades(json.data ?? []);
-        }
-      } catch {
-        // Silently fail
-      } finally {
-        setLoading(false);
+  const fetchTrades = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/orderbook/${cardId}/trades?limit=${MAX_DISPLAY}`);
+      if (res.ok) {
+        const json = await res.json();
+        setTrades(json.data ?? []);
       }
+    } catch {
+      // Silently fail
+    } finally {
+      setLoading(false);
     }
-    fetchTrades();
   }, [cardId]);
+
+  // WebSocket: listen for new trades on this card
+  const handleWsTrade = useCallback(
+    (data: unknown) => {
+      const trade = data as { tradeId?: string; price?: number; quantity?: number; timestamp?: string };
+      if (trade.tradeId && trade.price !== undefined) {
+        setTrades((prev) => {
+          const entry: TradeEntry = {
+            id: trade.tradeId!,
+            price: trade.price!,
+            quantity: trade.quantity ?? 1,
+            createdAt: trade.timestamp ?? new Date().toISOString(),
+          };
+          // Prepend and cap at MAX_DISPLAY
+          return [entry, ...prev].slice(0, MAX_DISPLAY);
+        });
+      }
+    },
+    [],
+  );
+
+  useWebSocket({
+    channels: cardId ? [`trades:${cardId}`] : [],
+    onMessage: handleWsTrade,
+    enabled: !!cardId,
+  });
+
+  // Initial fetch
+  useEffect(() => {
+    fetchTrades();
+  }, [fetchTrades]);
 
   if (loading) {
     return (

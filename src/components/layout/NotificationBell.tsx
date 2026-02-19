@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Bell } from "lucide-react";
 import { useAuth, getAccessToken } from "@/components/providers/AuthProvider";
+import { useNotifications } from "@/hooks/useWebSocket";
 import { NotificationDropdown } from "./NotificationDropdown";
 
 interface Notification {
@@ -15,6 +16,8 @@ interface Notification {
   createdAt: string;
 }
 
+const POLL_INTERVAL_FALLBACK = 60_000; // 60s fallback when WS disconnected
+
 export function NotificationBell() {
   const { user } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
@@ -22,8 +25,9 @@ export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const fetchNotificationsRef = useRef(async () => {
+  const fetchNotifications = useCallback(async () => {
     const token = getAccessToken();
     if (!token) return;
 
@@ -36,19 +40,54 @@ export function NotificationBell() {
       setNotifications(json.data);
       setUnreadCount(json.unreadCount);
     } catch {
-      // Silently fail — will retry on next poll
+      // Silently fail
     }
-  });
+  }, []);
 
-  // Poll for notifications every 30 seconds
+  // WebSocket: real-time notification updates
+  const handleWsNotification = useCallback(
+    (data: unknown) => {
+      const notification = data as Notification;
+      if (notification.id) {
+        setNotifications((prev) => {
+          // Avoid duplicates
+          if (prev.some((n) => n.id === notification.id)) return prev;
+          return [notification, ...prev].slice(0, 5);
+        });
+        setUnreadCount((prev) => prev + 1);
+      }
+    },
+    [],
+  );
+
+  const { connected } = useNotifications(user?.id ?? null, handleWsNotification);
+
+  // Initial fetch
+  useEffect(() => {
+    if (!user) return;
+    fetchNotifications();
+  }, [user, fetchNotifications]);
+
+  // Fallback: poll when WebSocket is not connected
   useEffect(() => {
     if (!user) return;
 
-    const fetch = () => fetchNotificationsRef.current();
-    fetch();
-    const interval = setInterval(fetch, 30_000);
-    return () => clearInterval(interval);
-  }, [user]);
+    if (connected) {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+      return;
+    }
+
+    pollRef.current = setInterval(fetchNotifications, POLL_INTERVAL_FALLBACK);
+    return () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    };
+  }, [user, connected, fetchNotifications]);
 
   // Close dropdown when clicking outside
   useEffect(() => {

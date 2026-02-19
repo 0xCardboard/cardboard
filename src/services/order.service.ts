@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/db";
 import { AppError } from "@/lib/errors";
 import { matchOrder } from "@/services/matching.service";
+import { createNotification } from "@/services/notification.service";
+import { publish } from "@/lib/publish";
 import { orderMatchingQueue } from "@/jobs/queue";
 import type {
   PlaceOrderInput,
@@ -50,8 +52,8 @@ export async function placeOrder(
     throw new AppError("NOT_FOUND", `Card not found: ${input.cardId}`);
   }
 
-  // BUY orders require a payment method on file
-  if (input.side === "BUY") {
+  // BUY orders require a payment method on file (skipped in dev — Stripe is bypassed)
+  if (input.side === "BUY" && process.env.NODE_ENV !== "development") {
     const defaultPm = await prisma.paymentMethod.findFirst({
       where: { userId, isDefault: true },
     });
@@ -207,6 +209,13 @@ export async function placeOrder(
     });
   }
 
+  // Publish order book update via WebSocket (new order on the book)
+  try {
+    publish(`orderbook:${input.cardId}`, { event: "new_order", orderId: order.id, side: input.side });
+  } catch {
+    // WebSocket server may not be running
+  }
+
   // Run matching inline so orders fill immediately
   const matchResult = await matchOrder(order.id);
 
@@ -293,6 +302,26 @@ export async function cancelOrder(
         where: { id: order.cardInstanceId },
         data: { status: "VERIFIED" },
       });
+    }
+  }
+
+  // Notify the user
+  const cardName = order.orderBook?.card?.name ?? "Unknown Card";
+  await createNotification(
+    userId,
+    "ORDER_CANCELLED",
+    "Order Cancelled",
+    `Your ${order.side.toLowerCase()} order for ${cardName} has been cancelled.`,
+    { orderId },
+  );
+
+  // Publish order book update via WebSocket
+  const cardId = order.orderBook?.card?.id;
+  if (cardId) {
+    try {
+      publish(`orderbook:${cardId}`, { event: "cancel", orderId });
+    } catch {
+      // WebSocket server may not be running
     }
   }
 

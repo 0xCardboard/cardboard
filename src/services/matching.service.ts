@@ -2,7 +2,7 @@ import { prisma } from "@/lib/db";
 import { processTradePayment } from "@/services/escrow.service";
 import { createNotification } from "@/services/notification.service";
 import { washTradeDetectionQueue } from "@/jobs/queue";
-import { publish } from "@/lib/websocket";
+import { publish } from "@/lib/publish";
 
 const PLATFORM_FEE_RATE = parseFloat(process.env.PLATFORM_FEE_RATE || "0.05");
 
@@ -26,10 +26,16 @@ export async function matchOrder(orderId: string): Promise<MatchResult> {
     include: { orderBook: true },
   });
 
-  if (!order) return { tradesCreated: 0, ordersUpdated: 0, cancelledRemainder: 0 };
+  if (!order) {
+    console.log(`[match] Order ${orderId} not found`);
+    return { tradesCreated: 0, ordersUpdated: 0, cancelledRemainder: 0 };
+  }
+
+  console.log(`[match] Matching order ${order.id}: side=${order.side} type=${order.type} price=${order.price} status=${order.status} orderBookId=${order.orderBookId} cardId=${order.orderBook.cardId}`);
 
   // Only match OPEN or PARTIALLY_FILLED orders
   if (order.status !== "OPEN" && order.status !== "PARTIALLY_FILLED") {
+    console.log(`[match] Skipping — status is ${order.status}`);
     return { tradesCreated: 0, ordersUpdated: 0, cancelledRemainder: 0 };
   }
 
@@ -39,7 +45,12 @@ export async function matchOrder(orderId: string): Promise<MatchResult> {
     // Find the best matching order on the opposite side
     const matchingOrder = await findBestMatch(order);
 
-    if (!matchingOrder) break;
+    if (!matchingOrder) {
+      console.log(`[match] No matching order found for ${order.side} @ ${order.price}`);
+      break;
+    }
+
+    console.log(`[match] Found match: ${matchingOrder.id} side=${matchingOrder.side} price=${matchingOrder.price} status=${matchingOrder.status}`);
 
     const fillQty = Math.min(
       remainingQty,
@@ -248,8 +259,24 @@ async function findBestMatch(
       ? [{ price: "asc" as const }, { createdAt: "asc" as const }]
       : [{ price: "desc" as const }, { createdAt: "asc" as const }];
 
-  return prisma.order.findFirst({
+  console.log(`[match] findBestMatch query:`, JSON.stringify(where));
+
+  const match = await prisma.order.findFirst({
     where,
     orderBy,
   });
+
+  if (!match) {
+    // Log how many opposing orders exist at all for this order book
+    const oppositeCount = await prisma.order.count({
+      where: {
+        orderBookId: order.orderBookId,
+        side: oppositeSide,
+        status: { in: ["OPEN", "PARTIALLY_FILLED"] },
+      },
+    });
+    console.log(`[match] No match found. Total ${oppositeSide} orders on book: ${oppositeCount}`);
+  }
+
+  return match;
 }
