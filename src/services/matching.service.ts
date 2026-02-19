@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { processTradePayment } from "@/services/escrow.service";
+import { processTradePayment, releaseEscrow } from "@/services/escrow.service";
 import { createNotification } from "@/services/notification.service";
 import { washTradeDetectionQueue } from "@/jobs/queue";
 import { publish } from "@/lib/publish";
@@ -62,6 +62,7 @@ export async function matchOrder(orderId: string): Promise<MatchResult> {
 
     // Execute the trade in a transaction
     let tradeId: string | null = null;
+    let isVaultFirstSettlement = false;
 
     await prisma.$transaction(async (tx) => {
       // Determine buyer and seller
@@ -117,21 +118,51 @@ export async function matchOrder(orderId: string): Promise<MatchResult> {
         },
       });
 
-      // Mark card instance as pending shipment — seller must ship to company.
-      // Ownership transfers only after verification (handled in settlement flow).
+      // Check if the card is already verified and in the warehouse (vault-first flow)
       if (sellOrder.cardInstanceId) {
-        await tx.cardInstance.update({
+        const cardInstance = await tx.cardInstance.findUnique({
           where: { id: sellOrder.cardInstanceId },
-          data: { status: "PENDING_SHIPMENT" },
+          select: { verifiedAt: true, status: true },
         });
+
+        if (cardInstance?.verifiedAt) {
+          // Vault-first: card is already in warehouse and verified.
+          // Transfer ownership to buyer immediately and keep VERIFIED status.
+          isVaultFirstSettlement = true;
+          await tx.cardInstance.update({
+            where: { id: sellOrder.cardInstanceId },
+            data: {
+              ownerId: buyOrder.userId,
+              status: "VERIFIED",
+            },
+          });
+        } else {
+          // Sell-first: card is not yet in the warehouse.
+          // Seller must ship it — set to PENDING_SHIPMENT.
+          await tx.cardInstance.update({
+            where: { id: sellOrder.cardInstanceId },
+            data: { status: "PENDING_SHIPMENT" },
+          });
+        }
       }
     });
 
     // Process payment outside the DB transaction (Stripe API calls should not be in transactions)
     if (tradeId) {
-      processTradePayment(tradeId).catch(() => {
-        // Payment processing is handled async — failure enqueues retry via BullMQ
-      });
+      if (isVaultFirstSettlement) {
+        // Vault-first: card already verified and in warehouse.
+        // Capture payment (skip shipping flow) then immediately release escrow to seller.
+        processTradePayment(tradeId, { skipShipping: true })
+          .then(() => releaseEscrow(tradeId!))
+          .catch(() => {
+            // Payment processing failure handled via retry queue
+          });
+      } else {
+        // Sell-first: capture payment, seller ships, admin verifies, then escrow releases.
+        processTradePayment(tradeId).catch(() => {
+          // Payment processing is handled async — failure enqueues retry via BullMQ
+        });
+      }
 
       // Enqueue wash trade detection
       washTradeDetectionQueue
