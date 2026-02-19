@@ -56,7 +56,10 @@ describe("matching.service", () => {
         const txMock = {
           trade: { create: vi.fn().mockResolvedValue({ id: "trade-1" }) },
           order: { update: vi.fn().mockResolvedValue({}) },
-          cardInstance: { update: vi.fn().mockResolvedValue({}) },
+          cardInstance: {
+            findUnique: vi.fn().mockResolvedValue(null),
+            update: vi.fn().mockResolvedValue({}),
+          },
         };
         await fn(txMock as unknown as typeof prisma);
       },
@@ -130,7 +133,10 @@ describe("matching.service", () => {
         const txMock = {
           trade: { create: vi.fn().mockResolvedValue({ id: "trade" }) },
           order: { update: vi.fn().mockResolvedValue({}) },
-          cardInstance: { update: vi.fn().mockResolvedValue({}) },
+          cardInstance: {
+            findUnique: vi.fn().mockResolvedValue(null),
+            update: vi.fn().mockResolvedValue({}),
+          },
         };
         await fn(txMock as unknown as typeof prisma);
       },
@@ -161,7 +167,10 @@ describe("matching.service", () => {
             }),
           },
           order: { update: vi.fn().mockResolvedValue({}) },
-          cardInstance: { update: vi.fn().mockResolvedValue({}) },
+          cardInstance: {
+            findUnique: vi.fn().mockResolvedValue(null),
+            update: vi.fn().mockResolvedValue({}),
+          },
         };
         await fn(txMock as unknown as typeof prisma);
       },
@@ -196,7 +205,10 @@ describe("matching.service", () => {
             }),
           },
           order: { update: vi.fn().mockResolvedValue({}) },
-          cardInstance: { update: vi.fn().mockResolvedValue({}) },
+          cardInstance: {
+            findUnique: vi.fn().mockResolvedValue(null),
+            update: vi.fn().mockResolvedValue({}),
+          },
         };
         await fn(txMock as unknown as typeof prisma);
       },
