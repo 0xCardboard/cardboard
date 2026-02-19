@@ -52,8 +52,8 @@ export async function placeOrder(
     throw new AppError("NOT_FOUND", `Card not found: ${input.cardId}`);
   }
 
-  // BUY orders require a payment method on file
-  if (input.side === "BUY") {
+  // BUY orders require a payment method on file (skipped in dev — Stripe is bypassed)
+  if (input.side === "BUY" && process.env.NODE_ENV !== "development") {
     const defaultPm = await prisma.paymentMethod.findFirst({
       where: { userId, isDefault: true },
     });
