@@ -45,6 +45,34 @@ export async function getSetsByGame(gameId: string): Promise<SetWithCardCount[]>
   });
 }
 
+/**
+ * Returns distinct base character names derived from Pokemon card names.
+ * Strips common TCG suffixes (V, VMAX, VSTAR, ex, EX, GX, etc.) so that
+ * "Charizard", "Charizard VSTAR", and "Charizard ex" all resolve to "Charizard".
+ */
+export async function getCharacters(gameId?: string, setId?: string): Promise<string[]> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const where: Record<string, any> = { supertype: "Pokemon" };
+
+  if (setId) where.setId = setId;
+  else if (gameId) where.set = { gameId };
+
+  const results = await prisma.card.findMany({
+    where,
+    select: { name: true },
+    distinct: ["name"],
+    orderBy: { name: "asc" },
+  });
+
+  const suffixPattern = /\s+(V|VMAX|VSTAR|ex|EX|GX|TAG TEAM|BREAK|V-UNION|LEGEND)$/;
+  const baseNames = new Set<string>();
+  for (const { name } of results) {
+    baseNames.add(name.replace(suffixPattern, "").trim());
+  }
+
+  return Array.from(baseNames).sort((a, b) => a.localeCompare(b));
+}
+
 export async function searchCards(filters: CardFilters): Promise<PaginatedResult<CardWithSet>> {
   const page = filters.page ?? DEFAULT_PAGE;
   const limit = Math.min(filters.limit ?? DEFAULT_LIMIT, MAX_LIMIT);
@@ -60,8 +88,15 @@ export async function searchCards(filters: CardFilters): Promise<PaginatedResult
   if (filters.setId) {
     where.setId = filters.setId;
   }
-  if (filters.name) {
+  if (filters.name && filters.character) {
+    where.AND = [
+      { name: { contains: filters.name, mode: "insensitive" } },
+      { name: { contains: filters.character, mode: "insensitive" } },
+    ];
+  } else if (filters.name) {
     where.name = { contains: filters.name, mode: "insensitive" };
+  } else if (filters.character) {
+    where.name = { contains: filters.character, mode: "insensitive" };
   }
   if (filters.rarity) {
     where.rarity = filters.rarity;

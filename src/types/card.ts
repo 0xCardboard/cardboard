@@ -88,6 +88,7 @@ export interface CardFilters {
   gameId?: string;
   setId?: string;
   name?: string;
+  character?: string;
   rarity?: string;
   supertype?: string;
   sortBy?: "name" | "price" | "number" | "newest";
