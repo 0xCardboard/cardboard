@@ -18,6 +18,9 @@ import {
   Clock,
   ChevronLeft,
   ChevronRight,
+  ExternalLink,
+  DollarSign,
+  Eye,
 } from "lucide-react";
 
 interface PortfolioInstance {
@@ -261,36 +264,36 @@ export default function PortfolioPage() {
             <Wallet className="h-7 w-7 text-primary" />
           </div>
           <h2 className="text-lg font-semibold font-[family-name:var(--font-display)]">
-            {statusFilter ? "No cards with this status" : "No holdings yet"}
+            {statusFilter ? "No cards with this status" : "No cards yet"}
           </h2>
           <p className="text-muted-foreground mt-2 max-w-sm mx-auto">
             {statusFilter ? (
               "Try selecting a different status filter."
             ) : (
-              <>
-                Your card holdings will appear here once you start trading.{" "}
-                <Link
-                  href="/cards"
-                  className="text-primary hover:underline"
-                >
-                  Browse cards
-                </Link>{" "}
-                to get started.
-              </>
+              "Browse the marketplace or deposit your first card into the vault."
             )}
           </p>
+          {!statusFilter && (
+            <div className="flex gap-3 justify-center mt-4">
+              <Button variant="outline" asChild>
+                <Link href="/cards">Browse Cards</Link>
+              </Button>
+              <Button asChild>
+                <Link href="/sell">Sell a Card</Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link href="/vault">Vault a Card</Link>
+              </Button>
+            </div>
+          )}
         </div>
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {instances.map((instance) => (
-              <Link
-                key={instance.id}
-                href={`/cards/${instance.card.id}`}
-                className="group"
-              >
-                <Card className="overflow-hidden transition-colors hover:border-primary/40">
-                  {/* Card Image */}
+              <Card key={instance.id} className="overflow-hidden transition-colors hover:border-primary/40 group">
+                {/* Card Image */}
+                <Link href={`/cards/${instance.card.id}`}>
                   <div className="aspect-[3/4] relative bg-muted/30">
                     {instance.card.imageUrl ? (
                       <Image
@@ -315,36 +318,72 @@ export default function PortfolioPage() {
                       </Badge>
                     </div>
                   </div>
+                </Link>
 
-                  <CardContent className="p-4">
+                <CardContent className="p-4">
+                  <Link href={`/cards/${instance.card.id}`}>
                     <h3 className="font-semibold text-sm group-hover:text-primary transition-colors truncate">
                       {instance.card.name}
                     </h3>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {instance.card.set.name} &middot;{" "}
-                      {instance.card.set.game.name}
-                    </p>
+                  </Link>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {instance.card.set.name} &middot;{" "}
+                    {instance.card.set.game.name}
+                  </p>
 
-                    <div className="flex items-center justify-between mt-3">
-                      <div className="flex items-center gap-1.5">
-                        <Badge
-                          variant="outline"
-                          className="text-[10px] font-mono"
-                        >
-                          {instance.gradingCompany} {instance.grade}
-                        </Badge>
-                      </div>
-                      <span className="text-sm font-[family-name:var(--font-mono)]">
-                        {formatPrice(instance.card.marketPrice)}
-                      </span>
+                  <div className="flex items-center justify-between mt-3">
+                    <div className="flex items-center gap-1.5">
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] font-mono"
+                      >
+                        {instance.gradingCompany} {instance.grade}
+                      </Badge>
                     </div>
+                    <span className="text-sm font-[family-name:var(--font-mono)]">
+                      {formatPrice(instance.card.marketPrice)}
+                    </span>
+                  </div>
 
-                    <div className="text-[10px] text-muted-foreground mt-2 font-mono truncate">
-                      Cert #{instance.certNumber}
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
+                  <div className="text-[10px] text-muted-foreground mt-2 font-mono truncate">
+                    Cert #{instance.certNumber}
+                  </div>
+
+                  {/* Status-specific actions */}
+                  <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-border/40">
+                    {instance.status === "VERIFIED" && (
+                      <Button variant="default" size="sm" className="h-7 text-xs gap-1 flex-1" asChild>
+                        <Link href={`/sell?cardId=${instance.card.id}&certNumber=${instance.certNumber}`}>
+                          <DollarSign className="h-3 w-3" />
+                          List for Sale
+                        </Link>
+                      </Button>
+                    )}
+                    {instance.status === "LISTED" && (
+                      <Button variant="secondary" size="sm" className="h-7 text-xs gap-1 flex-1" asChild>
+                        <Link href={`/orders?cardId=${instance.card.id}&side=SELL`}>
+                          <Eye className="h-3 w-3" />
+                          View Order
+                        </Link>
+                      </Button>
+                    )}
+                    {instance.status === "PENDING_SHIPMENT" && (
+                      <Button variant="secondary" size="sm" className="h-7 text-xs gap-1 flex-1" asChild>
+                        <Link href="/shipping-instructions">
+                          <Truck className="h-3 w-3" />
+                          Shipping Info
+                        </Link>
+                      </Button>
+                    )}
+                    <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-muted-foreground" asChild>
+                      <Link href={`/cards/${instance.card.id}`}>
+                        <ExternalLink className="h-3 w-3" />
+                        Details
+                      </Link>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
 

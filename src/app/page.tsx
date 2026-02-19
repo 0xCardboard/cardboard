@@ -1,8 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { useAuth, getAccessToken } from "@/components/providers/AuthProvider";
+import { formatPrice, formatNumber } from "@/lib/format";
 import {
   ShieldCheck,
   BarChart3,
@@ -15,6 +18,12 @@ import {
   Sparkles,
   CheckCircle2,
   Mail,
+  Wallet,
+  ShoppingCart,
+  DollarSign,
+  Vault,
+  Bell,
+  Loader2,
 } from "lucide-react";
 
 /* ── FAQ Accordion Item ─────────────────────────────────── */
@@ -55,11 +64,182 @@ function FAQItem({
   );
 }
 
+/* ── Authenticated Dashboard ───────────────────────────── */
+interface DashboardData {
+  portfolio: { totalCards: number; totalEstimatedValue: number } | null;
+  openOrders: number;
+  notifications: { id: string; title: string; message: string; createdAt: string; read: boolean }[];
+}
+
+function AuthenticatedDashboard({ userName }: { userName: string }) {
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchDashboard() {
+      const token = getAccessToken();
+      if (!token) { setLoading(false); return; }
+      const headers = { Authorization: `Bearer ${token}` };
+
+      try {
+        const [portfolioRes, ordersRes, notifRes] = await Promise.all([
+          fetch("/api/portfolio?limit=1", { headers }),
+          fetch("/api/orders?status=OPEN&limit=1", { headers }),
+          fetch("/api/notifications?limit=5", { headers }),
+        ]);
+
+        const portfolioJson = portfolioRes.ok ? await portfolioRes.json() : null;
+        const ordersJson = ordersRes.ok ? await ordersRes.json() : null;
+        const notifJson = notifRes.ok ? await notifRes.json() : null;
+
+        setData({
+          portfolio: portfolioJson?.summary
+            ? { totalCards: portfolioJson.summary.totalCards, totalEstimatedValue: portfolioJson.summary.totalEstimatedValue }
+            : { totalCards: 0, totalEstimatedValue: 0 },
+          openOrders: ordersJson?.pagination?.total ?? 0,
+          notifications: notifJson?.data?.slice(0, 5) ?? [],
+        });
+      } catch {
+        setData(null);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchDashboard();
+  }, []);
+
+  return (
+    <section className="relative border-b border-border/40 bg-secondary/20">
+      <div className="container mx-auto px-4 py-10 md:py-14">
+        {/* Welcome */}
+        <h1 className="text-2xl sm:text-3xl font-bold font-[family-name:var(--font-display)]">
+          Welcome back, {userName}
+        </h1>
+
+        {loading ? (
+          <div className="flex items-center gap-2 text-muted-foreground mt-4">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading dashboard...
+          </div>
+        ) : data ? (
+          <>
+            {/* Quick Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
+              <Card>
+                <CardContent className="p-5 flex items-center gap-4">
+                  <div className="h-10 w-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+                    <Wallet className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Cards in Portfolio</p>
+                    <p className="text-xl font-bold font-[family-name:var(--font-display)]">
+                      {formatNumber(data.portfolio?.totalCards ?? 0)}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-5 flex items-center gap-4">
+                  <div className="h-10 w-10 rounded-xl bg-green-500/10 border border-green-500/20 flex items-center justify-center shrink-0">
+                    <TrendingUp className="h-5 w-5 text-green-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Portfolio Value</p>
+                    <p className="text-xl font-bold font-[family-name:var(--font-mono)]">
+                      {formatPrice(data.portfolio?.totalEstimatedValue ?? 0)}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-5 flex items-center gap-4">
+                  <div className="h-10 w-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
+                    <ShoppingCart className="h-5 w-5 text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Open Orders</p>
+                    <p className="text-xl font-bold font-[family-name:var(--font-display)]">
+                      {formatNumber(data.openOrders)}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="flex flex-wrap gap-3 mt-6">
+              <Button asChild className="gap-2">
+                <Link href="/sell">
+                  <DollarSign className="h-4 w-4" />
+                  Sell a Card
+                </Link>
+              </Button>
+              <Button variant="outline" asChild className="gap-2">
+                <Link href="/vault">
+                  <Vault className="h-4 w-4" />
+                  Vault a Card
+                </Link>
+              </Button>
+              <Button variant="outline" asChild className="gap-2">
+                <Link href="/cards">
+                  <BarChart3 className="h-4 w-4" />
+                  Browse Marketplace
+                </Link>
+              </Button>
+              <Button variant="outline" asChild className="gap-2">
+                <Link href="/portfolio">
+                  <Wallet className="h-4 w-4" />
+                  My Portfolio
+                </Link>
+              </Button>
+            </div>
+
+            {/* Recent Activity */}
+            {data.notifications.length > 0 && (
+              <div className="mt-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                    Recent Activity
+                  </h2>
+                  <Link href="/notifications" className="text-xs text-primary hover:underline">
+                    View all
+                  </Link>
+                </div>
+                <div className="space-y-2">
+                  {data.notifications.map((notif) => (
+                    <div
+                      key={notif.id}
+                      className={`rounded-xl border border-border/50 bg-card/50 px-4 py-3 flex items-start gap-3 ${
+                        !notif.read ? "border-primary/20 bg-primary/5" : ""
+                      }`}
+                    >
+                      <Bell className={`h-4 w-4 mt-0.5 shrink-0 ${!notif.read ? "text-primary" : "text-muted-foreground/50"}`} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{notif.title}</p>
+                        <p className="text-xs text-muted-foreground truncate">{notif.message}</p>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground shrink-0">
+                        {new Date(notif.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
 /* ── Main Landing Page ──────────────────────────────────── */
 export default function Home() {
+  const { user, status: authStatus } = useAuth();
   const [openFAQ, setOpenFAQ] = useState<number | null>(null);
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
+  const isAuthenticated = authStatus === "authenticated" && user;
 
   const handleNewsletterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -150,6 +330,11 @@ export default function Home() {
 
   return (
     <div className="relative">
+      {/* ── AUTHENTICATED DASHBOARD ────────────────────────── */}
+      {isAuthenticated && (
+        <AuthenticatedDashboard userName={user.name || user.email || "there"} />
+      )}
+
       {/* ── HERO ──────────────────────────────────────────── */}
       <section className="relative overflow-hidden">
         {/* Background effects */}
