@@ -23,6 +23,7 @@ export function CardFilters({ games }: CardFiltersProps) {
   const searchParams = useSearchParams();
 
   const [sets, setSets] = useState<SetWithCardCount[]>([]);
+  const [characters, setCharacters] = useState<string[]>([]);
   const [rarities, setRarities] = useState<string[]>([]);
   const [nameInput, setNameInput] = useState(searchParams.get("name") || "");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -30,6 +31,7 @@ export function CardFilters({ games }: CardFiltersProps) {
 
   const currentGameId = searchParams.get("gameId") || "";
   const currentSetId = searchParams.get("setId") || "";
+  const currentCharacter = searchParams.get("character") || "";
   const currentRarity = searchParams.get("rarity") || "";
   const currentSortBy = searchParams.get("sortBy") || "";
 
@@ -58,12 +60,21 @@ export function CardFilters({ games }: CardFiltersProps) {
     };
   }, [currentGameId]);
 
-  // Fetch rarities when game/set changes
+  // Fetch characters and rarities when game/set changes
   useEffect(() => {
     let cancelled = false;
     const params = new URLSearchParams();
     if (currentSetId) params.set("setId", currentSetId);
     else if (currentGameId) params.set("gameId", currentGameId);
+
+    fetch(`/api/cards/characters?${params}`)
+      .then((res) => res.json())
+      .then((json) => {
+        if (!cancelled) setCharacters(json.data || []);
+      })
+      .catch(() => {
+        if (!cancelled) setCharacters([]);
+      });
 
     fetch(`/api/cards/rarities?${params}`)
       .then((res) => res.json())
@@ -109,7 +120,7 @@ export function CardFilters({ games }: CardFiltersProps) {
     router.push("/cards");
   }, [router]);
 
-  const hasFilters = currentGameId || currentSetId || currentRarity || nameInput || currentSortBy;
+  const hasFilters = currentGameId || currentSetId || currentCharacter || currentRarity || nameInput || currentSortBy;
 
   return (
     <div className="space-y-5">
@@ -160,6 +171,25 @@ export function CardFilters({ games }: CardFiltersProps) {
               {sets.map((set) => (
                 <SelectItem key={set.id} value={set.id}>
                   {set.name} ({set._count.cards})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {characters.length > 0 && (
+        <div>
+          <label className="text-xs font-medium mb-1.5 block text-muted-foreground">Character</label>
+          <Select value={currentCharacter} onValueChange={(v) => updateFilter("character", v === "__all__" ? "" : v)}>
+            <SelectTrigger className="rounded-xl bg-secondary/50 border-border/60">
+              <SelectValue placeholder="All characters" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">All characters</SelectItem>
+              {characters.map((character) => (
+                <SelectItem key={character} value={character}>
+                  {character}
                 </SelectItem>
               ))}
             </SelectContent>

@@ -16,6 +16,7 @@ export default async function BrowseCardsPage({
     gameId: typeof params.gameId === "string" ? params.gameId : undefined,
     setId: typeof params.setId === "string" ? params.setId : undefined,
     name: typeof params.name === "string" ? params.name : undefined,
+    character: typeof params.character === "string" ? params.character : undefined,
     rarity: typeof params.rarity === "string" ? params.rarity : undefined,
     supertype: typeof params.supertype === "string" ? params.supertype : undefined,
     sortBy: typeof params.sortBy === "string" ? (params.sortBy as CardFiltersType["sortBy"]) : undefined,
