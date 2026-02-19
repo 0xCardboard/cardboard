@@ -150,28 +150,53 @@ export async function placeOrder(
         throw new AppError("VALIDATION_ERROR", "Grade must be between 1 and 10");
       }
 
-      // Check cert number uniqueness
+      // Check if cert number is already registered
       const existingCert = await prisma.cardInstance.findUnique({
         where: { certNumber: input.certNumber },
       });
 
       if (existingCert) {
-        throw new AppError("CONFLICT", `Cert number already registered: ${input.certNumber}`);
+        // If the user owns this verified card, reuse it (vault-then-sell flow)
+        if (
+          existingCert.ownerId === userId &&
+          existingCert.status === "VERIFIED" &&
+          existingCert.cardId === input.cardId
+        ) {
+          const existingOrder = await prisma.order.findFirst({
+            where: {
+              cardInstanceId: existingCert.id,
+              status: { in: ["OPEN", "PARTIALLY_FILLED"] },
+            },
+          });
+          if (existingOrder) {
+            throw new AppError("CONFLICT", "This card is already listed in an open order");
+          }
+          cardInstanceId = existingCert.id;
+        } else if (existingCert.ownerId === userId && existingCert.status === "LISTED") {
+          throw new AppError("CONFLICT", "This card is already listed for sale");
+        } else if (existingCert.ownerId === userId) {
+          throw new AppError(
+            "VALIDATION_ERROR",
+            `This card is currently ${existingCert.status.toLowerCase().replace("_", " ")} and cannot be listed`,
+          );
+        } else {
+          throw new AppError("CONFLICT", `Cert number already registered: ${input.certNumber}`);
+        }
+      } else {
+        // Create new card instance with LISTED status (seller still has physical card)
+        const newInstance = await prisma.cardInstance.create({
+          data: {
+            cardId: input.cardId,
+            ownerId: userId,
+            gradingCompany: input.gradingCompany,
+            certNumber: input.certNumber,
+            grade: input.grade,
+            status: "LISTED",
+          },
+        });
+
+        cardInstanceId = newInstance.id;
       }
-
-      // Create card instance with LISTED status (seller still has physical card)
-      const newInstance = await prisma.cardInstance.create({
-        data: {
-          cardId: input.cardId,
-          ownerId: userId,
-          gradingCompany: input.gradingCompany,
-          certNumber: input.certNumber,
-          grade: input.grade,
-          status: "LISTED",
-        },
-      });
-
-      cardInstanceId = newInstance.id;
     }
   }
 
@@ -201,12 +226,15 @@ export async function placeOrder(
     include: ORDER_INCLUDE,
   });
 
-  // For Path B sell orders with existing instances, update status to LISTED
-  if (input.side === "SELL" && input.cardInstanceId) {
-    await prisma.cardInstance.update({
-      where: { id: input.cardInstanceId },
-      data: { status: "LISTED" },
-    });
+  // For sell orders referencing an existing verified instance, update status to LISTED
+  if (input.side === "SELL" && cardInstanceId) {
+    const inst = await prisma.cardInstance.findUnique({ where: { id: cardInstanceId } });
+    if (inst && inst.status === "VERIFIED") {
+      await prisma.cardInstance.update({
+        where: { id: cardInstanceId },
+        data: { status: "LISTED" },
+      });
+    }
   }
 
   // Publish order book update via WebSocket (new order on the book)

@@ -354,13 +354,13 @@ export function OrderForm({ cardId }: OrderFormProps) {
             </div>
             {success.side === "SELL" && (
               <div className="text-xs text-muted-foreground pl-6 space-y-1">
-                <p>Check your <Link href="/orders" className="text-primary hover:underline">orders page</Link> for status.</p>
+                <p>Check your <Link href="/orders" className="text-primary hover:underline">trades page</Link> for status.</p>
                 <p>Ship within 3 business days after matching.</p>
               </div>
             )}
             {success.side === "BUY" && (
               <div className="text-xs text-muted-foreground pl-6">
-                <p>Track your order on the <Link href="/orders" className="text-primary hover:underline">orders page</Link>.</p>
+                <p>Track your trade on the <Link href="/orders" className="text-primary hover:underline">trades page</Link>.</p>
               </div>
             )}
           </div>

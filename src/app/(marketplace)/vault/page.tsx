@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth, getAccessToken } from "@/components/providers/AuthProvider";
-import { formatPrice } from "@/lib/format";
 import {
   Search,
   ArrowLeft,
@@ -20,9 +19,10 @@ import {
   ExternalLink,
   AlertCircle,
   Lock,
-  Info,
+  Vault,
+  Copy,
+  CheckCircle2,
 } from "lucide-react";
-import type { OrderBookSnapshot } from "@/types/order";
 
 interface CatalogCard {
   id: string;
@@ -34,17 +34,30 @@ interface CatalogCard {
   set: { id: string; name: string; game: { id: string; name: string } };
 }
 
-const STEPS = ["Find Your Card", "Card Details", "Set Your Price", "Review & Confirm"];
+const STEPS = ["Find Your Card", "Card Details", "Confirm & Ship"];
 
-export default function SellPage() {
+const WAREHOUSE_ADDRESS = {
+  line1: "Cardboard Warehouse",
+  line2: "Attn: Card Verification",
+  line3: "123 Trading Card Lane, Suite 100",
+  line4: "Austin, TX 78701",
+};
+
+export default function VaultPage() {
   return (
-    <Suspense fallback={<div className="container mx-auto px-4 py-16 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" /></div>}>
-      <SellPageContent />
+    <Suspense
+      fallback={
+        <div className="container mx-auto px-4 py-16 text-center">
+          <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+        </div>
+      }
+    >
+      <VaultPageContent />
     </Suspense>
   );
 }
 
-function SellPageContent() {
+function VaultPageContent() {
   const searchParams = useSearchParams();
   const { status: authStatus } = useAuth();
   const [step, setStep] = useState(0);
@@ -60,21 +73,15 @@ function SellPageContent() {
   const [certNumber, setCertNumber] = useState("");
   const [certError, setCertError] = useState<string | null>(null);
 
-  // Step 3: Pricing
-  const [orderType, setOrderType] = useState<"LIMIT" | "MARKET">("LIMIT");
-  const [price, setPrice] = useState("");
-  const [orderBook, setOrderBook] = useState<OrderBookSnapshot | null>(null);
-  const [loadingOrderBook, setLoadingOrderBook] = useState(false);
-
-  // Step 4: Submit
+  // Step 3: Submit
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-  // Pre-populate from query params (e.g., from portfolio "List for Sale")
+  // Pre-populate from query params (e.g., from portfolio)
   useEffect(() => {
     const cardId = searchParams.get("cardId");
-    const cert = searchParams.get("certNumber");
     if (cardId) {
       fetch(`/api/cards/${cardId}`)
         .then((res) => res.json())
@@ -85,9 +92,6 @@ function SellPageContent() {
           }
         })
         .catch(() => {});
-    }
-    if (cert) {
-      setCertNumber(cert);
     }
   }, [searchParams]);
 
@@ -114,17 +118,6 @@ function SellPageContent() {
     }, 300);
   }, []);
 
-  // Fetch order book when card is selected and we reach step 2
-  useEffect(() => {
-    if (!selectedCard) return;
-    setLoadingOrderBook(true);
-    fetch(`/api/orderbook/${selectedCard.id}`)
-      .then((res) => res.json())
-      .then((json) => setOrderBook(json.data ?? null))
-      .catch(() => setOrderBook(null))
-      .finally(() => setLoadingOrderBook(false));
-  }, [selectedCard]);
-
   function validateCertNumber(value: string): string | null {
     if (!value.trim()) return "Certificate number is required";
     if (!/^\d{5,10}$/.test(value.trim())) return "PSA cert numbers are 5-10 digits";
@@ -146,14 +139,6 @@ function SellPageContent() {
     setStep(2);
   }
 
-  function handleStep3Next() {
-    if (orderType === "LIMIT") {
-      const p = parseFloat(price);
-      if (isNaN(p) || p <= 0) return;
-    }
-    setStep(3);
-  }
-
   async function handleSubmit() {
     const token = getAccessToken();
     if (!token || !selectedCard) return;
@@ -162,38 +147,37 @@ function SellPageContent() {
     setSubmitError(null);
 
     try {
-      const body: Record<string, unknown> = {
-        cardId: selectedCard.id,
-        side: "SELL",
-        type: orderType,
-        quantity: 1,
-        certNumber: certNumber.trim(),
-        gradingCompany: "PSA",
-        grade: 10,
-      };
-
-      if (orderType === "LIMIT") {
-        body.price = Math.round(parseFloat(price) * 100);
-      }
-
-      const res = await fetch("/api/orders", {
+      const res = await fetch("/api/card-instances", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify({
+          cardId: selectedCard.id,
+          certNumber: certNumber.trim(),
+          gradingCompany: "PSA",
+          grade: 10,
+        }),
       });
 
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Failed to place order");
+      if (!res.ok) throw new Error(json.error || "Failed to register card");
 
       setSubmitSuccess(true);
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "Failed to place order");
+      setSubmitError(err instanceof Error ? err.message : "Failed to register card");
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function handleCopyAddress() {
+    const address = `${WAREHOUSE_ADDRESS.line1}\n${WAREHOUSE_ADDRESS.line2}\n${WAREHOUSE_ADDRESS.line3}\n${WAREHOUSE_ADDRESS.line4}`;
+    navigator.clipboard.writeText(address).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
   }
 
   if (authStatus !== "authenticated") {
@@ -203,10 +187,10 @@ function SellPageContent() {
           <Lock className="h-7 w-7 text-primary" />
         </div>
         <h1 className="text-2xl font-bold font-[family-name:var(--font-display)]">
-          Sign in to sell
+          Sign in to vault a card
         </h1>
         <p className="text-muted-foreground mt-2 mb-6">
-          You need an account to list cards for sale.
+          You need an account to deposit cards into the vault.
         </p>
         <div className="flex gap-3 justify-center">
           <Button variant="outline" asChild>
@@ -228,27 +212,53 @@ function SellPageContent() {
           <Check className="h-8 w-8 text-green-400" />
         </div>
         <h1 className="text-2xl font-bold font-[family-name:var(--font-display)]">
-          Sell Order Placed
+          Card Registered!
         </h1>
         <p className="text-muted-foreground mt-3 leading-relaxed">
-          Your sell order for <strong>{selectedCard?.name}</strong> is now on the order book.
-          When a buyer matches your price, you&apos;ll be notified to ship your card to our warehouse.
+          Your <strong>{selectedCard?.name}</strong> (Cert #{certNumber}) has been registered.
+          Ship it to our warehouse and we&apos;ll verify it.
         </p>
+
+        <div className="mt-6 rounded-xl bg-secondary/50 border border-border/50 p-4 text-left text-sm space-y-1">
+          <p className="font-medium">Ship to:</p>
+          <p className="text-muted-foreground">{WAREHOUSE_ADDRESS.line1}</p>
+          <p className="text-muted-foreground">{WAREHOUSE_ADDRESS.line2}</p>
+          <p className="text-muted-foreground">{WAREHOUSE_ADDRESS.line3}</p>
+          <p className="text-muted-foreground">{WAREHOUSE_ADDRESS.line4}</p>
+          <button
+            onClick={handleCopyAddress}
+            className="text-xs text-primary hover:underline mt-2 inline-flex items-center gap-1"
+          >
+            {copied ? <CheckCircle2 className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+            {copied ? "Copied!" : "Copy address"}
+          </button>
+        </div>
+
         <div className="mt-6 rounded-xl bg-secondary/50 border border-border/50 p-4 text-left text-sm space-y-2">
           <p className="font-medium">What happens next:</p>
           <ul className="space-y-1.5 text-muted-foreground">
-            <li>1. A buyer matches your order</li>
-            <li>2. You ship your card within 3 business days</li>
-            <li>3. Our team verifies the card</li>
-            <li>4. Payment is released to you</li>
+            <li>1. Ship your graded card to the address above</li>
+            <li>2. Our team receives and verifies it against PSA records</li>
+            <li>3. Once verified, it appears in your portfolio as a VERIFIED card</li>
+            <li>4. You can then list it for sale, hold it, or redeem it anytime</li>
           </ul>
         </div>
+
         <div className="flex gap-3 justify-center mt-8">
           <Button variant="outline" asChild>
-            <Link href="/orders">View My Trades</Link>
+            <Link href="/portfolio">My Portfolio</Link>
           </Button>
-          <Button asChild>
-            <Link href="/sell">Sell Another Card</Link>
+          <Button
+            onClick={() => {
+              setSubmitSuccess(false);
+              setSelectedCard(null);
+              setCertNumber("");
+              setStep(0);
+              setSearchQuery("");
+              setSearchResults([]);
+            }}
+          >
+            Vault Another Card
           </Button>
         </div>
       </div>
@@ -260,18 +270,25 @@ function SellPageContent() {
       {/* Header */}
       <div className="mb-8">
         <Link
-          href="/cards"
+          href="/portfolio"
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
-          Back to browse
+          Back to portfolio
         </Link>
-        <h1 className="text-3xl font-bold font-[family-name:var(--font-display)]">
-          Sell a Card
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          List your PSA-graded card on the marketplace.
-        </p>
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+            <Vault className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold font-[family-name:var(--font-display)]">
+              Vault My Card
+            </h1>
+            <p className="text-muted-foreground mt-0.5">
+              Deposit a PSA-graded card into the Cardboard vault.
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Progress steps */}
@@ -357,11 +374,6 @@ function SellPageContent() {
                     <p className="text-[10px] text-muted-foreground truncate">
                       {card.set.name}
                     </p>
-                    {card.marketPrice && (
-                      <p className="text-xs font-semibold text-primary mt-1 font-[family-name:var(--font-mono)]">
-                        {formatPrice(card.marketPrice)}
-                      </p>
-                    )}
                   </div>
                 </button>
               ))}
@@ -376,7 +388,7 @@ function SellPageContent() {
             <div className="rounded-xl border border-border/50 bg-card/50 p-12 text-center">
               <Search className="h-8 w-8 text-muted-foreground/30 mx-auto mb-3" />
               <p className="text-muted-foreground text-sm">
-                Start typing to search for a card to sell
+                Search for the card you want to vault
               </p>
             </div>
           ) : null}
@@ -389,7 +401,6 @@ function SellPageContent() {
           <Card>
             <CardContent className="p-6">
               <div className="flex gap-6">
-                {/* Card image */}
                 <div className="w-32 shrink-0">
                   <div className="aspect-[2.5/3.5] relative bg-secondary/30 rounded-lg overflow-hidden">
                     {selectedCard.imageUrl ? (
@@ -408,7 +419,6 @@ function SellPageContent() {
                     )}
                   </div>
                 </div>
-                {/* Card info */}
                 <div className="flex-1 space-y-3">
                   <div>
                     <h2 className="text-xl font-bold font-[family-name:var(--font-display)]">
@@ -420,21 +430,18 @@ function SellPageContent() {
                     </p>
                   </div>
                   {selectedCard.rarity && (
-                    <Badge variant="secondary" className="text-xs">{selectedCard.rarity}</Badge>
-                  )}
-                  {selectedCard.marketPrice && (
-                    <p className="text-sm text-muted-foreground">
-                      Market price:{" "}
-                      <span className="font-semibold text-foreground font-[family-name:var(--font-mono)]">
-                        {formatPrice(selectedCard.marketPrice)}
-                      </span>
-                    </p>
+                    <Badge variant="secondary" className="text-xs">
+                      {selectedCard.rarity}
+                    </Badge>
                   )}
                   <Button
                     variant="ghost"
                     size="sm"
                     className="text-xs text-muted-foreground"
-                    onClick={() => { setStep(0); setSelectedCard(null); }}
+                    onClick={() => {
+                      setStep(0);
+                      setSelectedCard(null);
+                    }}
                   >
                     Change card
                   </Button>
@@ -456,13 +463,17 @@ function SellPageContent() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Grading Company</label>
+                  <label className="text-xs text-muted-foreground mb-1 block">
+                    Grading Company
+                  </label>
                   <div className="flex h-10 w-full items-center rounded-xl border border-border/60 bg-secondary/50 px-3 text-sm font-medium">
                     PSA
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Grade</label>
+                  <label className="text-xs text-muted-foreground mb-1 block">
+                    Grade
+                  </label>
                   <div className="flex h-10 w-full items-center rounded-xl border border-border/60 bg-secondary/50 px-3 text-sm font-medium font-[family-name:var(--font-mono)]">
                     10
                   </div>
@@ -497,7 +508,9 @@ function SellPageContent() {
               {certNumber.length >= 5 && (
                 <div className="rounded-xl border border-border/50 bg-secondary/30 p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs font-medium text-muted-foreground">PSA Scan Preview</p>
+                    <p className="text-xs font-medium text-muted-foreground">
+                      PSA Scan Preview
+                    </p>
                     <a
                       href={`https://www.psacard.com/cert/${certNumber.trim()}/psa`}
                       target="_blank"
@@ -516,7 +529,11 @@ function SellPageContent() {
           </Card>
 
           <div className="flex justify-between">
-            <Button variant="outline" onClick={() => setStep(0)} className="gap-1.5 rounded-xl">
+            <Button
+              variant="outline"
+              onClick={() => setStep(0)}
+              className="gap-1.5 rounded-xl"
+            >
               <ArrowLeft className="h-3.5 w-3.5" /> Back
             </Button>
             <Button onClick={handleStep2Next} className="gap-1.5 rounded-xl">
@@ -526,150 +543,14 @@ function SellPageContent() {
         </div>
       )}
 
-      {/* Step 3: Set Your Price */}
+      {/* Step 3: Confirm & Ship */}
       {step === 2 && selectedCard && (
         <div className="space-y-6">
-          {/* Order book context */}
+          {/* Summary */}
           <Card>
             <CardContent className="p-6">
               <h3 className="font-semibold font-[family-name:var(--font-display)] mb-4">
-                Market Context
-              </h3>
-              {loadingOrderBook ? (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Loading order book...
-                </div>
-              ) : orderBook ? (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Best Bid</p>
-                    <p className="text-lg font-bold font-[family-name:var(--font-mono)] text-green-400">
-                      {orderBook.bids.length > 0 ? formatPrice(orderBook.bids[0].price) : "---"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Best Ask</p>
-                    <p className="text-lg font-bold font-[family-name:var(--font-mono)] text-red-400">
-                      {orderBook.asks.length > 0 ? formatPrice(orderBook.asks[0].price) : "---"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Last Trade</p>
-                    <p className="text-lg font-bold font-[family-name:var(--font-mono)]">
-                      {orderBook.lastTradePrice ? formatPrice(orderBook.lastTradePrice) : "---"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Spread</p>
-                    <p className="text-lg font-bold font-[family-name:var(--font-mono)]">
-                      {orderBook.spread !== null ? formatPrice(orderBook.spread) : "---"}
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">No order book data available.</p>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6 space-y-4">
-              <h3 className="font-semibold font-[family-name:var(--font-display)]">
-                Order Type
-              </h3>
-
-              {/* Type toggle */}
-              <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-secondary/50">
-                <button
-                  onClick={() => setOrderType("LIMIT")}
-                  className={`py-2.5 rounded-lg text-sm font-semibold transition-all ${
-                    orderType === "LIMIT"
-                      ? "bg-accent text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  Limit Order
-                </button>
-                <button
-                  onClick={() => setOrderType("MARKET")}
-                  className={`py-2.5 rounded-lg text-sm font-semibold transition-all ${
-                    orderType === "MARKET"
-                      ? "bg-accent text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  Market Order
-                </button>
-              </div>
-
-              {orderType === "LIMIT" ? (
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">
-                    Your Ask Price (USD)
-                  </label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0.01"
-                    placeholder="0.00"
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    className="h-12 rounded-xl bg-secondary/50 border-border/60 focus:border-primary/50 font-[family-name:var(--font-mono)] text-lg"
-                    autoFocus
-                  />
-                  <p className="text-xs text-muted-foreground mt-1.5">
-                    Your card will be listed at this price until matched or cancelled.
-                  </p>
-                </div>
-              ) : (
-                <div className="rounded-xl bg-secondary/30 border border-border/50 p-4">
-                  <p className="text-sm">
-                    Your card will sell at the best available buy price.
-                  </p>
-                  {orderBook && orderBook.bids.length > 0 ? (
-                    <p className="text-sm mt-1 text-muted-foreground">
-                      Best bid:{" "}
-                      <span className="font-semibold text-green-400 font-[family-name:var(--font-mono)]">
-                        {formatPrice(orderBook.bids[0].price)}
-                      </span>
-                    </p>
-                  ) : (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      No active buy orders. Your market order will be cancelled.
-                    </p>
-                  )}
-                </div>
-              )}
-
-              <div className="flex items-center gap-2 text-xs text-muted-foreground rounded-lg bg-secondary/30 px-3 py-2">
-                <Info className="h-3.5 w-3.5 shrink-0" />
-                Platform fee: $0 (beta)
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="flex justify-between">
-            <Button variant="outline" onClick={() => setStep(1)} className="gap-1.5 rounded-xl">
-              <ArrowLeft className="h-3.5 w-3.5" /> Back
-            </Button>
-            <Button
-              onClick={handleStep3Next}
-              disabled={orderType === "LIMIT" && (!price || parseFloat(price) <= 0)}
-              className="gap-1.5 rounded-xl"
-            >
-              Review Order <ArrowRight className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Step 4: Review & Confirm */}
-      {step === 3 && selectedCard && (
-        <div className="space-y-6">
-          <Card>
-            <CardContent className="p-6">
-              <h3 className="font-semibold font-[family-name:var(--font-display)] mb-4">
-                Order Summary
+                Summary
               </h3>
               <div className="flex gap-6">
                 <div className="w-24 shrink-0">
@@ -706,56 +587,72 @@ function SellPageContent() {
                       <p className="text-xs text-muted-foreground">Grade</p>
                       <p>PSA 10</p>
                     </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Order Type</p>
-                      <p>{orderType}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Price</p>
-                      <p className="font-[family-name:var(--font-mono)] font-semibold">
-                        {orderType === "LIMIT"
-                          ? `$${parseFloat(price).toFixed(2)}`
-                          : "Market"}
-                      </p>
-                    </div>
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    Platform fee: $0 (beta)
-                  </div>
+
+                  {/* PSA scan link */}
+                  <a
+                    href={`https://www.psacard.com/cert/${certNumber.trim()}/psa`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                  >
+                    View PSA scan <ExternalLink className="h-3 w-3" />
+                  </a>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* What happens next */}
+          {/* What happens */}
           <Card>
             <CardContent className="p-6">
               <h3 className="font-semibold font-[family-name:var(--font-display)] mb-3">
                 What happens next
               </h3>
-              {orderType === "MARKET" && orderBook && orderBook.bids.length > 0 ? (
-                <div className="space-y-2 text-sm text-muted-foreground">
-                  <p>
-                    Your card will match the best available buyer immediately.
-                    Ship your card to our warehouse within <strong className="text-foreground">3 business days</strong>.
-                    The buyer&apos;s payment is held in escrow until we verify your card.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-2 text-sm text-muted-foreground">
-                  <p>
-                    Your sell order will be posted on the order book. When a buyer matches your price,
-                    you&apos;ll be notified to ship your card to our warehouse within{" "}
-                    <strong className="text-foreground">3 business days</strong>.
-                  </p>
-                </div>
-              )}
-              <Link
-                href="/shipping-instructions"
-                className="inline-flex items-center gap-1 text-sm text-primary hover:underline mt-3"
-              >
-                View shipping instructions <ExternalLink className="h-3 w-3" />
-              </Link>
+              <div className="space-y-2 text-sm text-muted-foreground">
+                <p>
+                  Ship your card to our warehouse. Once we verify it against PSA records,
+                  it&apos;ll appear in your portfolio as a <strong className="text-foreground">verified card</strong>.
+                  You can then sell it, hold it, or redeem it anytime.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Warehouse address */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold font-[family-name:var(--font-display)]">
+                  Ship to
+                </h3>
+                <button
+                  onClick={handleCopyAddress}
+                  className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                >
+                  {copied ? (
+                    <CheckCircle2 className="h-3 w-3" />
+                  ) : (
+                    <Copy className="h-3 w-3" />
+                  )}
+                  {copied ? "Copied!" : "Copy address"}
+                </button>
+              </div>
+              <div className="rounded-lg bg-secondary/50 border border-border/40 p-3 text-sm text-muted-foreground space-y-0.5">
+                <p>{WAREHOUSE_ADDRESS.line1}</p>
+                <p>{WAREHOUSE_ADDRESS.line2}</p>
+                <p>{WAREHOUSE_ADDRESS.line3}</p>
+                <p>{WAREHOUSE_ADDRESS.line4}</p>
+              </div>
+              <div className="mt-3 text-xs text-muted-foreground space-y-1">
+                <p>Include your username and cert number in the package.</p>
+                <Link
+                  href="/shipping-instructions"
+                  className="text-primary hover:underline inline-flex items-center gap-1"
+                >
+                  View full packing guidelines <ExternalLink className="h-3 w-3" />
+                </Link>
+              </div>
             </CardContent>
           </Card>
 
@@ -767,18 +664,22 @@ function SellPageContent() {
           )}
 
           <div className="flex justify-between">
-            <Button variant="outline" onClick={() => setStep(2)} className="gap-1.5 rounded-xl">
+            <Button
+              variant="outline"
+              onClick={() => setStep(1)}
+              className="gap-1.5 rounded-xl"
+            >
               <ArrowLeft className="h-3.5 w-3.5" /> Back
             </Button>
             <Button
               onClick={handleSubmit}
               disabled={submitting}
-              className="gap-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white"
+              className="gap-1.5 rounded-xl"
             >
               {submitting ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <>Confirm Sell Order</>
+                <>Confirm &amp; Get Shipping Instructions</>
               )}
             </Button>
           </div>
